@@ -271,7 +271,7 @@ int main(int argc, char *argv[]) {
         // Check sign of the first mode
         double coeff_mean = 0.0;
         for(long i=0; i<N; i++) {
-            coeff_mean += (*Coeffs)[i * npca + 0];
+            coeff_mean += Coeffs[i * npca + 0];
         }
         coeff_mean /= N;
 
