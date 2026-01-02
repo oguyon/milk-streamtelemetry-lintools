@@ -12,17 +12,39 @@ void perform_pca(double *X, long N, long P, int npca, double **Coeffs, double **
 void perform_cca_float(float *X, long N, long P, float *Y, long Q, int nvec, float **A_vec, float **B_vec);
 void perform_pca_float(float *X, long N, long P, int npca, float **Coeffs, float **Modes, const char* out_filename, int xa, int ya);
 
+void print_help(const char *progname) {
+    fprintf(stderr, "Usage: %s [options] <nvec> <A.fits> <B.fits>\n", progname);
+    fprintf(stderr, "\n");
+    fprintf(stderr, "Performs Canonical Correlation Analysis (CCA) between two datasets.\n");
+    fprintf(stderr, "\n");
+    fprintf(stderr, "Arguments:\n");
+    fprintf(stderr, "  <nvec>          Number of canonical vectors to compute.\n");
+    fprintf(stderr, "  <A.fits>        Input dataset A (3D cube or 2D coefficients).\n");
+    fprintf(stderr, "  <B.fits>        Input dataset B (3D cube or 2D coefficients).\n");
+    fprintf(stderr, "\n");
+    fprintf(stderr, "Options:\n");
+    fprintf(stderr, "  -npca <n>       Pre-process inputs with PCA (keep n modes) before CCA.\n");
+    fprintf(stderr, "  -ncpu <n>       Set number of CPU threads (OpenBLAS).\n");
+    fprintf(stderr, "  -float          Use single precision (float) instead of double.\n");
+    fprintf(stderr, "  -shift <n>      Time shift dataset B by n steps (positive or negative).\n");
+    fprintf(stderr, "\n");
+}
+
 int main(int argc, char *argv[]) {
     int npca = 0;
     int ncpu = 0;
     int use_float = 0;
     int arg_offset = 0;
+    int shift = 0;
 
     // We need to loop over arguments because we might have multiple flags now (-npca, -ncpu, -float)
     // Basic argument parsing loop
     int i = 1;
     while (i < argc) {
-        if (strcmp(argv[i], "-npca") == 0) {
+        if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
+            print_help(argv[0]);
+            return 0;
+        } else if (strcmp(argv[i], "-npca") == 0) {
             if (i + 1 >= argc) {
                 fprintf(stderr, "Error: -npca requires an argument.\n");
                 return 1;
@@ -50,13 +72,21 @@ int main(int argc, char *argv[]) {
             use_float = 1;
             i += 1;
             arg_offset += 1;
+        } else if (strcmp(argv[i], "-shift") == 0) {
+             if (i + 1 >= argc) {
+                fprintf(stderr, "Error: -shift requires an argument.\n");
+                return 1;
+            }
+            shift = atoi(argv[i+1]);
+            i += 2;
+            arg_offset += 2;
         } else {
             break; // Positional argument found
         }
     }
 
     if (argc - arg_offset != 4) {
-         fprintf(stderr, "Usage: %s [-npca <n>] [-ncpu <n>] [-float] <nvec> <A.fits> <B.fits>\n", argv[0]);
+         print_help(argv[0]);
          return 1;
     }
 
@@ -68,6 +98,9 @@ int main(int argc, char *argv[]) {
         printf("Using Single Precision (float).\n");
     } else {
         printf("Using Double Precision (double).\n");
+    }
+    if (shift != 0) {
+        printf("Time shifting second series by %d steps.\n", shift);
     }
 
     int nvec = atoi(argv[1 + arg_offset]);
@@ -87,21 +120,37 @@ int main(int argc, char *argv[]) {
 
     if (use_float) {
         float *X_f = NULL, *Y_f = NULL;
+        float *X_orig = NULL, *Y_orig = NULL;
 
         printf("Reading %s...\n", fileA);
         read_fits_float(fileA, &X_f, &Na, &Pa, &xa, &ya, &naxisA);
+        X_orig = X_f;
         printf("  Dimensions: %ld samples x %ld pixels (%d x %d), NAXIS=%d\n", Na, Pa, xa, ya, naxisA);
 
         printf("Reading %s...\n", fileB);
         read_fits_float(fileB, &Y_f, &Nb, &Qb, &xb, &yb, &naxisB);
+        Y_orig = Y_f;
         printf("  Dimensions: %ld samples x %ld pixels (%d x %d), NAXIS=%d\n", Nb, Qb, xb, yb, naxisB);
 
-        if (Na != Nb) {
-            fprintf(stderr, "Error: Number of samples (N) must match between A and B.\n");
-            free(X_f); free(Y_f);
+        // Shift and Truncate Logic
+        long t_start = (0 > -shift) ? 0 : -shift; // max(0, -shift)
+        long t_end = (Na < (Nb - shift)) ? Na : (Nb - shift); // min(Na, Nb - shift)
+        long N_new = t_end - t_start;
+
+        if (N_new < 1) {
+            fprintf(stderr, "Error: Overlap after shift is %ld (invalid).\n", N_new);
+            free(X_orig); free(Y_orig);
             return 1;
         }
-        long N = Na;
+
+        if (N_new < Na || N_new < Nb) {
+            printf("  Truncating/Shifting: N_overlap = %ld (Original: %ld, %ld)\n", N_new, Na, Nb);
+        }
+
+        // Adjust pointers
+        X_f = X_orig + (t_start * Pa);
+        Y_f = Y_orig + ((t_start + shift) * Qb);
+        long N = N_new;
 
         int is_coeffs = 0;
         if (naxisA == 2 && naxisB == 2) {
@@ -112,7 +161,7 @@ int main(int argc, char *argv[]) {
             printf("Detected input as image cubes (3D).\n");
         } else {
             fprintf(stderr, "Error: Mismatched input formats (NAXIS A=%d, B=%d).\n", naxisA, naxisB);
-            free(X_f); free(Y_f);
+            free(X_orig); free(Y_orig);
             return 1;
         }
 
@@ -215,26 +264,42 @@ int main(int argc, char *argv[]) {
 
         printf("Done.\n");
 
-        free(X_f); free(Y_f);
+        free(X_orig); free(Y_orig);
         free(A_vec_cca); free(B_vec_cca);
 
     } else {
         // Double precision (original code)
-        // Read Data
+        double *X_orig = NULL, *Y_orig = NULL;
+
         printf("Reading %s...\n", fileA);
         read_fits(fileA, &X, &Na, &Pa, &xa, &ya, &naxisA);
+        X_orig = X;
         printf("  Dimensions: %ld samples x %ld pixels (%d x %d), NAXIS=%d\n", Na, Pa, xa, ya, naxisA);
 
         printf("Reading %s...\n", fileB);
         read_fits(fileB, &Y, &Nb, &Qb, &xb, &yb, &naxisB);
+        Y_orig = Y;
         printf("  Dimensions: %ld samples x %ld pixels (%d x %d), NAXIS=%d\n", Nb, Qb, xb, yb, naxisB);
 
-        if (Na != Nb) {
-            fprintf(stderr, "Error: Number of samples (N) must match between A and B.\n");
-            free(X); free(Y);
+        // Shift and Truncate Logic
+        long t_start = (0 > -shift) ? 0 : -shift; // max(0, -shift)
+        long t_end = (Na < (Nb - shift)) ? Na : (Nb - shift); // min(Na, Nb - shift)
+        long N_new = t_end - t_start;
+
+        if (N_new < 1) {
+            fprintf(stderr, "Error: Overlap after shift is %ld (invalid).\n", N_new);
+            free(X_orig); free(Y_orig);
             return 1;
         }
-        long N = Na;
+
+        if (N_new < Na || N_new < Nb) {
+            printf("  Truncating/Shifting: N_overlap = %ld (Original: %ld, %ld)\n", N_new, Na, Nb);
+        }
+
+        // Adjust pointers
+        X = X_orig + (t_start * Pa);
+        Y = Y_orig + ((t_start + shift) * Qb);
+        long N = N_new;
 
         // Detect if input is Coefficients (2D) or Image Cube (3D)
         int is_coeffs = 0;
@@ -246,7 +311,7 @@ int main(int argc, char *argv[]) {
             printf("Detected input as image cubes (3D).\n");
         } else {
             fprintf(stderr, "Error: Mismatched input formats (NAXIS A=%d, B=%d).\n", naxisA, naxisB);
-            free(X); free(Y);
+            free(X_orig); free(Y_orig);
             return 1;
         }
 
@@ -349,7 +414,7 @@ int main(int argc, char *argv[]) {
 
         printf("Done.\n");
 
-        free(X); free(Y);
+        free(X_orig); free(Y_orig);
         free(A_vec_cca); free(B_vec_cca);
     }
     return 0;

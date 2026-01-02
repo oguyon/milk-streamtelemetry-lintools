@@ -4,10 +4,27 @@
 #include <time.h>
 #include "common.h"
 
+void print_help(const char *progname) {
+    fprintf(stderr, "Usage: %s <input.fits> <output.fits>\n", progname);
+    fprintf(stderr, "\n");
+    fprintf(stderr, "Randomly shuffles the slices (time axis) of a 3D FITS cube.\n");
+    fprintf(stderr, "Used for testing and destroying temporal correlations.\n");
+    fprintf(stderr, "\n");
+    fprintf(stderr, "Arguments:\n");
+    fprintf(stderr, "  <input.fits>    Input 3D FITS cube.\n");
+    fprintf(stderr, "  <output.fits>   Output shuffled 3D FITS cube.\n");
+    fprintf(stderr, "\n");
+}
+
 int main(int argc, char *argv[]) {
     if (argc != 3) {
-        fprintf(stderr, "Usage: %s <input.fits> <output.fits>\n", argv[0]);
+        print_help(argv[0]);
         return 1;
+    }
+
+    if (strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "--help") == 0) {
+        print_help(argv[0]);
+        return 0;
     }
 
     const char *infile = argv[1];

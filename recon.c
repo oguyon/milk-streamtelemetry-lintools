@@ -5,10 +5,28 @@
 #include <cblas.h>
 #include "common.h"
 
+void print_help(const char *progname) {
+    fprintf(stderr, "Usage: %s <modes.fits> <coeffs.fits> <output.fits>\n", progname);
+    fprintf(stderr, "\n");
+    fprintf(stderr, "Reconstructs a 3D FITS cube from spatial modes and temporal coefficients.\n");
+    fprintf(stderr, "Performs the matrix multiplication: Output = Coeffs * Modes.\n");
+    fprintf(stderr, "\n");
+    fprintf(stderr, "Arguments:\n");
+    fprintf(stderr, "  <modes.fits>    Input spatial modes (npca x P).\n");
+    fprintf(stderr, "  <coeffs.fits>   Input temporal coefficients (N x npca).\n");
+    fprintf(stderr, "  <output.fits>   Output reconstructed cube (N x P).\n");
+    fprintf(stderr, "\n");
+}
+
 int main(int argc, char *argv[]) {
     if (argc != 4) {
-        fprintf(stderr, "Usage: %s <modes.fits> <coeffs.fits> <output.fits>\n", argv[0]);
+        print_help(argv[0]);
         return 1;
+    }
+
+    if (strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "--help") == 0) {
+        print_help(argv[0]);
+        return 0;
     }
 
     const char *modes_file = argv[1];

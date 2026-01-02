@@ -1,2 +1,0 @@
-modes.fits coeffs.fits
-modes.fits coeffs.fits

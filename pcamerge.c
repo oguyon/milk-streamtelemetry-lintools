@@ -9,6 +9,22 @@
 // Forward declaration
 void perform_merge(char **mode_files, char **coeff_files, int n_files, const char *out_modes, const char *out_coeffs, int n_modes_keep, int ncpu);
 
+void print_help(const char *progname) {
+    fprintf(stderr, "Usage: %s [options] <input_list.txt> <output_modes.fits> <output_coeffs.fits>\n", progname);
+    fprintf(stderr, "\n");
+    fprintf(stderr, "Merges multiple PCA results (partial spatial modes) into a global PCA basis.\n");
+    fprintf(stderr, "\n");
+    fprintf(stderr, "Arguments:\n");
+    fprintf(stderr, "  <input_list.txt>     ASCII file listing pairs of 'modes.fits coeffs.fits'.\n");
+    fprintf(stderr, "  <output_modes.fits>  Output global spatial modes.\n");
+    fprintf(stderr, "  <output_coeffs.fits> Output global temporal coefficients.\n");
+    fprintf(stderr, "\n");
+    fprintf(stderr, "Options:\n");
+    fprintf(stderr, "  -nmodes <n>     Number of global modes to retain (default: rank of merged basis).\n");
+    fprintf(stderr, "  -ncpu <n>       Set number of CPU threads (OpenBLAS).\n");
+    fprintf(stderr, "\n");
+}
+
 int main(int argc, char *argv[]) {
     int ncpu = 0;
     int n_modes_keep = 0; // 0 = all
@@ -17,7 +33,10 @@ int main(int argc, char *argv[]) {
     // Argument parsing
     int i = 1;
     while (i < argc) {
-        if (strcmp(argv[i], "-ncpu") == 0) {
+        if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
+            print_help(argv[0]);
+            return 0;
+        } else if (strcmp(argv[i], "-ncpu") == 0) {
             if (i + 1 >= argc) {
                 fprintf(stderr, "Error: -ncpu requires an argument.\n");
                 return 1;
@@ -47,7 +66,7 @@ int main(int argc, char *argv[]) {
     }
 
     if (argc - arg_offset != 3) {
-        fprintf(stderr, "Usage: %s [-ncpu <n>] [-nmodes <n>] <input_list.txt> <output_modes.fits> <output_coeffs.fits>\n", argv[0]);
+        print_help(argv[0]);
         return 1;
     }
 

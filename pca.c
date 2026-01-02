@@ -20,6 +20,27 @@ int compare_float_desc(const void *a, const void *b) {
     return (db > da) - (da > db);
 }
 
+void print_help(const char *progname) {
+    fprintf(stderr, "Usage: %s [options] <npca> <input.fits> <modes.fits> <coeffs.fits>\n", progname);
+    fprintf(stderr, "\n");
+    fprintf(stderr, "Performs Principal Component Analysis (SVD) on a 3D FITS cube (x, y, N).\n");
+    fprintf(stderr, "\n");
+    fprintf(stderr, "Arguments:\n");
+    fprintf(stderr, "  <npca>          Number of principal components to compute.\n");
+    fprintf(stderr, "  <input.fits>    Input 3D FITS cube (N samples).\n");
+    fprintf(stderr, "  <modes.fits>    Output spatial modes (npca, y, x).\n");
+    fprintf(stderr, "  <coeffs.fits>   Output temporal coefficients (N, npca).\n");
+    fprintf(stderr, "\n");
+    fprintf(stderr, "Options:\n");
+    fprintf(stderr, "  -ncpu <n>       Set number of CPU threads (OpenBLAS).\n");
+    fprintf(stderr, "  -float          Use single precision (float) instead of double.\n");
+    fprintf(stderr, "  -mask <file>    Apply spatial mask from FITS file (active > 0.5).\n");
+    fprintf(stderr, "  -automask <arg> Automatically compute mask from variance.\n");
+    fprintf(stderr, "                  arg format: 'n<count>' (top N pixels) or 'f<frac>' (top fraction).\n");
+    fprintf(stderr, "                  Writes 'pca.automask.fits'.\n");
+    fprintf(stderr, "\n");
+}
+
 int main(int argc, char *argv[]) {
     int ncpu = 0;
     int use_float = 0;
@@ -30,7 +51,10 @@ int main(int argc, char *argv[]) {
     // Argument parsing
     int i = 1;
     while (i < argc) {
-        if (strcmp(argv[i], "-ncpu") == 0) {
+        if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
+            print_help(argv[0]);
+            return 0;
+        } else if (strcmp(argv[i], "-ncpu") == 0) {
             if (i + 1 >= argc) {
                 fprintf(stderr, "Error: -ncpu requires an argument.\n");
                 return 1;
@@ -68,7 +92,7 @@ int main(int argc, char *argv[]) {
     }
 
     if (argc - arg_offset != 5) {
-        fprintf(stderr, "Usage: %s [-ncpu <n>] [-float] [-mask <file>] [-automask <arg>] <npca> <input.fits> <modes.fits> <coeffs.fits>\n", argv[0]);
+        print_help(argv[0]);
         return 1;
     }
 
