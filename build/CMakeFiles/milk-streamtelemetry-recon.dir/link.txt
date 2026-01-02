@@ -1,0 +1,1 @@
+/usr/bin/cc  -O3 -Wall "CMakeFiles/milk-streamtelemetry-recon.dir/recon.c.o" -o milk-streamtelemetry-recon  libcommon.a -lcfitsio -lopenblas -lm

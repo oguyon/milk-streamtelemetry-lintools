@@ -1,0 +1,1 @@
+/usr/bin/cc  -O3 -Wall "CMakeFiles/milk-streamtelemetry-pcamerge.dir/pcamerge.c.o" -o milk-streamtelemetry-pcamerge  libcommon.a -lcfitsio -lopenblas -llapacke -lm

@@ -1,0 +1,1 @@
+/usr/bin/cc  -O3 -Wall CMakeFiles/gen_data.dir/gen_data.c.o -o gen_data  libcommon.a -lcfitsio

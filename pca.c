@@ -260,6 +260,18 @@ int main(int argc, char *argv[]) {
             return 1;
         }
 
+        // Write Eigenvalues
+        FILE *feig = fopen("pca.eigenvalues.txt", "w");
+        if (feig) {
+            for(long k=0; k<K; k++) {
+                fprintf(feig, "%.6g\n", S[k]*S[k]);
+            }
+            fclose(feig);
+            printf("Wrote pca.eigenvalues.txt\n");
+        } else {
+            fprintf(stderr, "Warning: Could not write pca.eigenvalues.txt\n");
+        }
+
         // Coeffs = U * S (first npca columns)
         float *Coeffs = (float *)malloc(N * npca * sizeof(float));
         for(long i=0; i<N; i++) {
@@ -460,6 +472,18 @@ int main(int argc, char *argv[]) {
         if (info != 0) {
             fprintf(stderr, "LAPACKE_dgesdd failed with error code %d\n", info);
             return 1;
+        }
+
+        // Write Eigenvalues
+        FILE *feig = fopen("pca.eigenvalues.txt", "w");
+        if (feig) {
+            for(long k=0; k<K; k++) {
+                fprintf(feig, "%.15g\n", S[k]*S[k]);
+            }
+            fclose(feig);
+            printf("Wrote pca.eigenvalues.txt\n");
+        } else {
+            fprintf(stderr, "Warning: Could not write pca.eigenvalues.txt\n");
         }
 
         // Coeffs = U * S (first npca columns)

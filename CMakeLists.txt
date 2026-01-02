@@ -30,6 +30,16 @@ target_link_libraries(milk-streamtelemetry-cca PRIVATE
     m
 )
 
+# Test Data Generator
+add_executable(gen_data gen_data.c)
+target_include_directories(gen_data PRIVATE
+    ${CFITSIO_INCLUDE_DIRS}
+)
+target_link_libraries(gen_data PRIVATE
+    common
+    ${CFITSIO_LIBRARIES}
+)
+
 # PCA Program
 add_executable(milk-streamtelemetry-pca pca.c)
 target_include_directories(milk-streamtelemetry-pca PRIVATE
@@ -55,5 +65,20 @@ target_link_libraries(milk-streamtelemetry-recon PRIVATE
     common
     ${CFITSIO_LIBRARIES}
     ${OPENBLAS_LIBRARIES}
+    m
+)
+
+# PCA Merge Program
+add_executable(milk-streamtelemetry-pcamerge pcamerge.c)
+target_include_directories(milk-streamtelemetry-pcamerge PRIVATE
+    ${CFITSIO_INCLUDE_DIRS}
+    ${OPENBLAS_INCLUDE_DIRS}
+    ${LAPACKE_INCLUDE_DIRS}
+)
+target_link_libraries(milk-streamtelemetry-pcamerge PRIVATE
+    common
+    ${CFITSIO_LIBRARIES}
+    ${OPENBLAS_LIBRARIES}
+    ${LAPACKE_LIBRARIES}
     m
 )

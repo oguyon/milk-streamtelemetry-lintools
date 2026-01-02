@@ -1,0 +1,8 @@
+/app/build/CMakeFiles/common.dir
+/app/build/CMakeFiles/milk-streamtelemetry-cca.dir
+/app/build/CMakeFiles/gen_data.dir
+/app/build/CMakeFiles/milk-streamtelemetry-pca.dir
+/app/build/CMakeFiles/milk-streamtelemetry-recon.dir
+/app/build/CMakeFiles/milk-streamtelemetry-pcamerge.dir
+/app/build/CMakeFiles/edit_cache.dir
+/app/build/CMakeFiles/rebuild_cache.dir

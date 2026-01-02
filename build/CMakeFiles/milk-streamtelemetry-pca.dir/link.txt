@@ -1,0 +1,1 @@
+/usr/bin/cc  -O3 -Wall "CMakeFiles/milk-streamtelemetry-pca.dir/pca.c.o" -o milk-streamtelemetry-pca  libcommon.a -lcfitsio -lopenblas -llapacke -lm
