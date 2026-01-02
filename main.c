@@ -55,6 +55,15 @@ int main(int argc, char *argv[]) {
         nvec = (int)N;
     }
 
+    if (nvec > Pa) {
+        fprintf(stderr, "Warning: nvec (%d) > Pa (%ld). Reducing nvec to Pa.\n", nvec, Pa);
+        nvec = (int)Pa;
+    }
+    if (nvec > Qb) {
+        fprintf(stderr, "Warning: nvec (%d) > Qb (%ld). Reducing nvec to Qb.\n", nvec, Qb);
+        nvec = (int)Qb;
+    }
+
     // Center Data
     printf("Centering data...\n");
     center_columns(X, N, Pa);
@@ -334,6 +343,15 @@ void perform_cca(double *X, long N, long P, double *Y, long Q, int nvec, double 
     LAPACKE_dgesvd(LAPACK_ROW_MAJOR, 'A', 'A', Kx, Ky, M, Ky,
                    S, U, Kx, Vt, Ky, superb);
 
+    printf("Canonical Correlations:\n");
+    for(int i=0; i<nvec; i++) {
+        // nvec is already checked to be <= N, but we should also check if i < min(Kx, Ky)
+        // because S has size min(Kx, Ky).
+        if (i < ((Kx < Ky) ? Kx : Ky)) {
+            printf("  Mode %d: %g\n", i, S[i]);
+        }
+    }
+
     // Calculate Canonical Vectors
     // Solve Rx * A = U (first nvec columns)
     // Solve Ry * B = V (first nvec columns of V = rows of Vt^T... wait)
@@ -431,14 +449,17 @@ void perform_cca(double *X, long N, long P, double *Y, long Q, int nvec, double 
         }
     }
 
-    // Copy Rx to a temp buffer because dgels destroys it.
+    // Copy Rx to a temp buffer because dgelss destroys it.
     double *Rx_tmp = (double *)malloc(Kx * P * sizeof(double));
     memcpy(Rx_tmp, Rx, Kx * P * sizeof(double));
 
-    // Solve Rx * A = U
+    // Solve Rx * A = U using dgelss (SVD based least squares) to handle rank deficiency
     // Rx is Kx x P.
-    // 'N' for No transpose.
-    LAPACKE_dgels(LAPACK_ROW_MAJOR, 'N', Kx, P, nvec, Rx_tmp, P, RHS_A, nvec);
+    // dgelss args: m, n, nrhs, a, lda, b, ldb, s, rcond, rank
+
+    double *S_Rx = (double *)malloc(((Kx < P) ? Kx : P) * sizeof(double));
+    lapack_int rank_Rx;
+    LAPACKE_dgelss(LAPACK_ROW_MAJOR, Kx, P, nvec, Rx_tmp, P, RHS_A, nvec, S_Rx, -1, &rank_Rx);
 
     // Solution is in RHS_A (P x nvec).
     // We need to transpose it to A_vec (nvec x P) for writing.
@@ -448,6 +469,7 @@ void perform_cca(double *X, long N, long P, double *Y, long Q, int nvec, double 
         }
     }
 
+    free(S_Rx);
     free(Rx_tmp);
     free(RHS_A);
 
@@ -487,7 +509,9 @@ void perform_cca(double *X, long N, long P, double *Y, long Q, int nvec, double 
     double *Ry_tmp = (double *)malloc(Ky * Q * sizeof(double));
     memcpy(Ry_tmp, Ry, Ky * Q * sizeof(double));
 
-    LAPACKE_dgels(LAPACK_ROW_MAJOR, 'N', Ky, Q, nvec, Ry_tmp, Q, RHS_B, nvec);
+    double *S_Ry = (double *)malloc(((Ky < Q) ? Ky : Q) * sizeof(double));
+    lapack_int rank_Ry;
+    LAPACKE_dgelss(LAPACK_ROW_MAJOR, Ky, Q, nvec, Ry_tmp, Q, RHS_B, nvec, S_Ry, -1, &rank_Ry);
 
     // Transpose to B_vec
     for (int j = 0; j < nvec; j++) {
@@ -496,6 +520,7 @@ void perform_cca(double *X, long N, long P, double *Y, long Q, int nvec, double 
         }
     }
 
+    free(S_Ry);
     free(Ry_tmp);
     free(RHS_B);
 
