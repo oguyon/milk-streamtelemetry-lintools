@@ -44,15 +44,16 @@ int main(int argc, char *argv[]) {
     double *X = NULL, *Y = NULL;
     long Na, Pa, Nb, Qb;
     int xa, ya, xb, yb;
+    int naxisA, naxisB;
 
     // Read Data
     printf("Reading %s...\n", fileA);
-    read_fits(fileA, &X, &Na, &Pa, &xa, &ya);
-    printf("  Dimensions: %ld samples x %ld pixels (%d x %d)\n", Na, Pa, xa, ya);
+    read_fits(fileA, &X, &Na, &Pa, &xa, &ya, &naxisA);
+    printf("  Dimensions: %ld samples x %ld pixels (%d x %d), NAXIS=%d\n", Na, Pa, xa, ya, naxisA);
 
     printf("Reading %s...\n", fileB);
-    read_fits(fileB, &Y, &Nb, &Qb, &xb, &yb);
-    printf("  Dimensions: %ld samples x %ld pixels (%d x %d)\n", Nb, Qb, xb, yb);
+    read_fits(fileB, &Y, &Nb, &Qb, &xb, &yb, &naxisB);
+    printf("  Dimensions: %ld samples x %ld pixels (%d x %d), NAXIS=%d\n", Nb, Qb, xb, yb, naxisB);
 
     if (Na != Nb) {
         fprintf(stderr, "Error: Number of samples (N) must match between A and B.\n");
@@ -60,6 +61,20 @@ int main(int argc, char *argv[]) {
         return 1;
     }
     long N = Na;
+
+    // Detect if input is Coefficients (2D) or Image Cube (3D)
+    int is_coeffs = 0;
+    if (naxisA == 2 && naxisB == 2) {
+        is_coeffs = 1;
+        printf("Detected input as coefficients (2D).\n");
+    } else if (naxisA == 3 && naxisB == 3) {
+        is_coeffs = 0;
+        printf("Detected input as image cubes (3D).\n");
+    } else {
+        fprintf(stderr, "Error: Mismatched input formats (NAXIS A=%d, B=%d).\n", naxisA, naxisB);
+        free(X); free(Y);
+        return 1;
+    }
 
     if (nvec > N) {
         fprintf(stderr, "Warning: nvec (%d) > N (%ld). Reducing nvec to N.\n", nvec, N);
@@ -75,8 +90,36 @@ int main(int argc, char *argv[]) {
 
     double *A_vec_cca = NULL, *B_vec_cca = NULL;
 
-    if (npca > 0) {
-        // PCA Mode
+    if (is_coeffs) {
+        // Input are coefficients. npca argument should ideally be ignored or matched?
+        // If user passed -npca, it's irrelevant here because we don't do PCA on coefficients (usually).
+        // Or do we? "Modify the cca program so it takes as input the modal coefficients... The output vectors are then also modal coefficients."
+        // This implies CCA on Coeffs.
+        if (npca > 0) {
+            fprintf(stderr, "Warning: -npca ignored because input is already coefficients.\n");
+        }
+
+        if (nvec > Pa) {
+            fprintf(stderr, "Warning: nvec (%d) > Pa (%ld). Reducing nvec to Pa.\n", nvec, Pa);
+            nvec = (int)Pa;
+        }
+        if (nvec > Qb) {
+            fprintf(stderr, "Warning: nvec (%d) > Qb (%ld). Reducing nvec to Qb.\n", nvec, Qb);
+            nvec = (int)Qb;
+        }
+
+        perform_cca(X, N, Pa, Y, Qb, nvec, &A_vec_cca, &B_vec_cca);
+
+        // Output is 2D coefficients (nvec x P)
+        printf("Writing ccaA.fits (Coeffs)...\n");
+        // write_fits_2d: width=P, height=nvec.
+        write_fits_2d("ccaA.fits", A_vec_cca, Pa, nvec);
+
+        printf("Writing ccaB.fits (Coeffs)...\n");
+        write_fits_2d("ccaB.fits", B_vec_cca, Qb, nvec);
+
+    } else if (npca > 0) {
+        // PCA Mode on 3D images
         if (npca > N) {
             fprintf(stderr, "Warning: npca (%d) > N (%ld). Reducing npca to N.\n", npca, N);
             npca = (int)N;
@@ -120,8 +163,14 @@ int main(int argc, char *argv[]) {
         free(CoeffsB); free(ModesB);
         free(Wa); free(Wb);
 
+        printf("Writing ccaA.fits...\n");
+        write_fits_3d("ccaA.fits", A_vec_cca, xa, ya, nvec);
+
+        printf("Writing ccaB.fits...\n");
+        write_fits_3d("ccaB.fits", B_vec_cca, xb, yb, nvec);
+
     } else {
-        // Raw CCA
+        // Raw CCA on 3D images
         if (nvec > Pa) {
             fprintf(stderr, "Warning: nvec (%d) > Pa (%ld). Reducing nvec to Pa.\n", nvec, Pa);
             nvec = (int)Pa;
@@ -132,13 +181,13 @@ int main(int argc, char *argv[]) {
         }
 
         perform_cca(X, N, Pa, Y, Qb, nvec, &A_vec_cca, &B_vec_cca);
+
+        printf("Writing ccaA.fits...\n");
+        write_fits_3d("ccaA.fits", A_vec_cca, xa, ya, nvec);
+
+        printf("Writing ccaB.fits...\n");
+        write_fits_3d("ccaB.fits", B_vec_cca, xb, yb, nvec);
     }
-
-    printf("Writing ccaA.fits...\n");
-    write_fits_3d("ccaA.fits", A_vec_cca, xa, ya, nvec);
-
-    printf("Writing ccaB.fits...\n");
-    write_fits_3d("ccaB.fits", B_vec_cca, xb, yb, nvec);
 
     printf("Done.\n");
 

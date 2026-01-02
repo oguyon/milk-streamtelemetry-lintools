@@ -10,7 +10,8 @@
 // For 3D: N=naxis3, P=naxis1*naxis2. xa=naxis1, ya=naxis2.
 // For 2D: N=naxis2, P=naxis1. xa=naxis1, ya=1.
 // data is allocated and filled with flattened array (row-major: N x P).
-void read_fits(const char *filename, double **data, long *N, long *P, int *xa, int *ya);
+// naxis_out returns the NAXIS of the file (2 or 3).
+void read_fits(const char *filename, double **data, long *N, long *P, int *xa, int *ya, int *naxis_out);
 
 // Writes a 3D FITS cube (xa, ya, z_dim).
 // data is expected to be z_dim * (xa*ya) elements.

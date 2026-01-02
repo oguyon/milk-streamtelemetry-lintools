@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-void read_fits(const char *filename, double **data, long *N, long *P, int *xa, int *ya) {
+void read_fits(const char *filename, double **data, long *N, long *P, int *xa, int *ya, int *naxis_out) {
     fitsfile *fptr;
     int status = 0;
     int naxis;
@@ -20,6 +20,8 @@ void read_fits(const char *filename, double **data, long *N, long *P, int *xa, i
         fits_close_file(fptr, &status);
         exit(1);
     }
+
+    if (naxis_out) *naxis_out = naxis;
 
     fits_get_img_size(fptr, naxis, naxes, &status);
     CHECK_STATUS(status);

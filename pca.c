@@ -31,9 +31,10 @@ int main(int argc, char *argv[]) {
     double *X = NULL;
     long N, P;
     int xa, ya;
+    int naxis;
 
     printf("Reading %s...\n", infile);
-    read_fits(infile, &X, &N, &P, &xa, &ya);
+    read_fits(infile, &X, &N, &P, &xa, &ya, &naxis);
     printf("  Dimensions: %ld samples x %ld pixels (%d x %d)\n", N, P, xa, ya);
 
     if (npca > N) {

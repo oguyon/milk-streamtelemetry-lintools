@@ -30,7 +30,7 @@ int main(int argc, char *argv[]) {
     // read_fits handles both.
     // N will be naxis3 (or naxis2 if 2D), P will be xa*ya.
     // If modes is (xa, ya, npca), then N_modes = npca, P_modes = xa*ya.
-    read_fits(modes_file, &Modes, &N_modes, &P_modes, &xa, &ya);
+    read_fits(modes_file, &Modes, &N_modes, &P_modes, &xa, &ya, NULL);
     printf("  Modes Dim: %ld modes x %ld pixels (%d x %d)\n", N_modes, P_modes, xa, ya);
 
     printf("Reading Coeffs...\n");
@@ -39,7 +39,7 @@ int main(int argc, char *argv[]) {
     // We wrote it as width=npca, height=N.
     // So N_coeffs = N, P_coeffs = npca.
     int dummy_xa, dummy_ya;
-    read_fits(coeffs_file, &Coeffs, &N_coeffs, &P_coeffs, &dummy_xa, &dummy_ya);
+    read_fits(coeffs_file, &Coeffs, &N_coeffs, &P_coeffs, &dummy_xa, &dummy_ya, NULL);
     printf("  Coeffs Dim: %ld samples x %ld coeffs\n", N_coeffs, P_coeffs);
 
     if (N_modes != P_coeffs) {
