@@ -164,6 +164,25 @@ void perform_pca(double *X, long N, long P, int npca, double **Coeffs, double **
         }
     }
 
+    // Check sign of the first mode
+    double coeff_mean = 0.0;
+    for(long i=0; i<N; i++) {
+        coeff_mean += (*Coeffs)[i * npca + 0];
+    }
+    coeff_mean /= N;
+
+    if (coeff_mean < 0) {
+        printf("Flipping sign of Mode 0 to ensure positive average coefficient.\n");
+        // Flip Coeffs column 0
+        for(long i=0; i<N; i++) {
+            (*Coeffs)[i * npca + 0] *= -1.0;
+        }
+        // Flip Vt row 0 (which becomes Mode 0)
+        for(long j=0; j<P; j++) {
+            Vt[0 * P + j] *= -1.0;
+        }
+    }
+
     *Modes = (double *)malloc(npca * P * sizeof(double));
     for(int i=0; i<npca; i++) {
         for(long j=0; j<P; j++) {
