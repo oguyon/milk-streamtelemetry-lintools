@@ -12,23 +12,50 @@ void perform_pca(double *X, long N, long P, int npca, double **Coeffs, double **
 
 int main(int argc, char *argv[]) {
     int npca = 0;
+    int ncpu = 0;
     int arg_offset = 0;
 
-    if (argc >= 6 && strcmp(argv[1], "-npca") == 0) {
-        npca = atoi(argv[2]);
-        if (npca < 1) {
-            fprintf(stderr, "Error: npca must be >= 1. Got %d.\n", npca);
-            return 1;
+    // We need to loop over arguments because we might have multiple flags now (-npca, -ncpu)
+    // Basic argument parsing loop
+    int i = 1;
+    while (i < argc) {
+        if (strcmp(argv[i], "-npca") == 0) {
+            if (i + 1 >= argc) {
+                fprintf(stderr, "Error: -npca requires an argument.\n");
+                return 1;
+            }
+            npca = atoi(argv[i+1]);
+            if (npca < 1) {
+                fprintf(stderr, "Error: npca must be >= 1. Got %d.\n", npca);
+                return 1;
+            }
+            i += 2;
+            arg_offset += 2;
+        } else if (strcmp(argv[i], "-ncpu") == 0) {
+             if (i + 1 >= argc) {
+                fprintf(stderr, "Error: -ncpu requires an argument.\n");
+                return 1;
+            }
+            ncpu = atoi(argv[i+1]);
+            if (ncpu < 1) {
+                fprintf(stderr, "Error: ncpu must be >= 1. Got %d.\n", ncpu);
+                return 1;
+            }
+            i += 2;
+            arg_offset += 2;
+        } else {
+            break; // Positional argument found
         }
-        arg_offset = 2;
-    } else if (argc != 4) {
-        fprintf(stderr, "Usage: %s [-npca <n>] <nvec> <A.fits> <B.fits>\n", argv[0]);
-        return 1;
     }
 
     if (argc - arg_offset != 4) {
-         fprintf(stderr, "Usage: %s [-npca <n>] <nvec> <A.fits> <B.fits>\n", argv[0]);
+         fprintf(stderr, "Usage: %s [-npca <n>] [-ncpu <n>] <nvec> <A.fits> <B.fits>\n", argv[0]);
          return 1;
+    }
+
+    if (ncpu > 0) {
+        openblas_set_num_threads(ncpu);
+        printf("Using %d CPU cores.\n", ncpu);
     }
 
     int nvec = atoi(argv[1 + arg_offset]);
@@ -201,10 +228,13 @@ void perform_pca(double *X, long N, long P, int npca, double **Coeffs, double **
     double *S = (double *)malloc(K * sizeof(double));
     double *U = (double *)malloc(N * K * sizeof(double));
     double *Vt = (double *)malloc(K * P * sizeof(double));
-    double *superb = (double *)malloc((K - 1) * sizeof(double));
 
-    LAPACKE_dgesvd(LAPACK_ROW_MAJOR, 'S', 'S', N, P, X, P,
-                   S, U, K, Vt, P, superb);
+    lapack_int info = LAPACKE_dgesdd(LAPACK_ROW_MAJOR, 'S', N, P, X, P,
+                                     S, U, K, Vt, P);
+    if (info != 0) {
+        fprintf(stderr, "LAPACKE_dgesdd failed with error code %d\n", info);
+        exit(1);
+    }
 
     *Coeffs = (double *)malloc(N * npca * sizeof(double));
     for(long i=0; i<N; i++) {
@@ -241,7 +271,7 @@ void perform_pca(double *X, long N, long P, int npca, double **Coeffs, double **
 
     write_fits_3d(out_filename, *Modes, xa, ya, npca);
 
-    free(S); free(U); free(Vt); free(superb);
+    free(S); free(U); free(Vt);
 }
 
 void perform_cca(double *X, long N, long P, double *Y, long Q, int nvec, double **A_vec, double **B_vec) {
@@ -281,10 +311,13 @@ void perform_cca(double *X, long N, long P, double *Y, long Q, int nvec, double 
     double *S = (double *)malloc(((Kx < Ky) ? Kx : Ky) * sizeof(double));
     double *U = (double *)malloc(Kx * Kx * sizeof(double));
     double *Vt = (double *)malloc(Ky * Ky * sizeof(double));
-    double *superb = (double *)malloc((((Kx < Ky) ? Kx : Ky) - 1) * sizeof(double));
 
-    LAPACKE_dgesvd(LAPACK_ROW_MAJOR, 'A', 'A', Kx, Ky, M, Ky,
-                   S, U, Kx, Vt, Ky, superb);
+    lapack_int info = LAPACKE_dgesdd(LAPACK_ROW_MAJOR, 'A', Kx, Ky, M, Ky,
+                   S, U, Kx, Vt, Ky);
+    if (info != 0) {
+        fprintf(stderr, "LAPACKE_dgesdd failed with error code %d\n", info);
+        exit(1);
+    }
 
     printf("Canonical Correlations:\n");
     for(int i=0; i<nvec; i++) {
@@ -338,5 +371,5 @@ void perform_cca(double *X, long N, long P, double *Y, long Q, int nvec, double 
 
     free(Rx); free(Ry);
     free(tauX); free(tauY);
-    free(M); free(S); free(U); free(Vt); free(superb);
+    free(M); free(S); free(U); free(Vt);
 }

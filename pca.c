@@ -7,15 +7,36 @@
 #include "common.h"
 
 int main(int argc, char *argv[]) {
-    if (argc != 5) {
-        fprintf(stderr, "Usage: %s <npca> <input.fits> <modes.fits> <coeffs.fits>\n", argv[0]);
+    int ncpu = 0;
+    int arg_offset = 0;
+
+    // Check for optional -ncpu argument
+    if (argc >= 6 && strcmp(argv[1], "-ncpu") == 0) {
+        ncpu = atoi(argv[2]);
+        if (ncpu < 1) {
+            fprintf(stderr, "Error: ncpu must be >= 1. Got %d.\n", ncpu);
+            return 1;
+        }
+        arg_offset = 2;
+    } else if (argc != 5) {
+        fprintf(stderr, "Usage: %s [-ncpu <n>] <npca> <input.fits> <modes.fits> <coeffs.fits>\n", argv[0]);
         return 1;
     }
 
-    int npca = atoi(argv[1]);
-    const char *infile = argv[2];
-    const char *modes_file = argv[3];
-    const char *coeffs_file = argv[4];
+    if (argc - arg_offset != 5) {
+        fprintf(stderr, "Usage: %s [-ncpu <n>] <npca> <input.fits> <modes.fits> <coeffs.fits>\n", argv[0]);
+        return 1;
+    }
+
+    if (ncpu > 0) {
+        openblas_set_num_threads(ncpu);
+        printf("Using %d CPU cores.\n", ncpu);
+    }
+
+    int npca = atoi(argv[1 + arg_offset]);
+    const char *infile = argv[2 + arg_offset];
+    const char *modes_file = argv[3 + arg_offset];
+    const char *coeffs_file = argv[4 + arg_offset];
 
     if (npca < 1) {
         fprintf(stderr, "Error: npca must be >= 1. Got %d.\n", npca);
@@ -68,11 +89,15 @@ int main(int argc, char *argv[]) {
     double *S = (double *)malloc(K * sizeof(double));
     double *U = (double *)malloc(N * K * sizeof(double));
     double *Vt = (double *)malloc(K * P * sizeof(double));
-    double *superb = (double *)malloc((K - 1) * sizeof(double));
 
-    printf("Computing SVD...\n");
-    LAPACKE_dgesvd(LAPACK_ROW_MAJOR, 'S', 'S', N, P, X, P,
-                   S, U, K, Vt, P, superb);
+    printf("Computing SVD (using dgesdd)...\n");
+    // Use dgesdd for speed (Divide and Conquer)
+    lapack_int info = LAPACKE_dgesdd(LAPACK_ROW_MAJOR, 'S', N, P, X, P,
+                                     S, U, K, Vt, P);
+    if (info != 0) {
+        fprintf(stderr, "LAPACKE_dgesdd failed with error code %d\n", info);
+        return 1;
+    }
 
     // Coeffs = U * S (first npca columns)
     double *Coeffs = (double *)malloc(N * npca * sizeof(double));
@@ -127,7 +152,7 @@ int main(int argc, char *argv[]) {
 
     printf("Done.\n");
 
-    free(X); free(S); free(U); free(Vt); free(superb);
+    free(X); free(S); free(U); free(Vt);
     free(Coeffs); free(Modes);
     return 0;
 }
