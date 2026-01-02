@@ -16,6 +16,10 @@ int main(int argc, char *argv[]) {
 
     if (argc >= 6 && strcmp(argv[1], "-npca") == 0) {
         npca = atoi(argv[2]);
+        if (npca < 1) {
+            fprintf(stderr, "Error: npca must be >= 1. Got %d.\n", npca);
+            return 1;
+        }
         arg_offset = 2;
     } else if (argc != 4) {
         fprintf(stderr, "Usage: %s [-npca <n>] <nvec> <A.fits> <B.fits>\n", argv[0]);

@@ -61,6 +61,11 @@ void read_fits(const char *filename, double **data, long *N, long *P, int *xa, i
 }
 
 void write_fits_3d(const char *filename, double *data, int xa, int ya, int z_dim) {
+    if (xa < 1 || ya < 1 || z_dim < 1) {
+        fprintf(stderr, "Error: Invalid dimensions for 3D FITS write: %d x %d x %d\n", xa, ya, z_dim);
+        exit(1);
+    }
+
     fitsfile *fptr;
     int status = 0;
     long naxes[3];
@@ -86,6 +91,11 @@ void write_fits_3d(const char *filename, double *data, int xa, int ya, int z_dim
 }
 
 void write_fits_2d(const char *filename, double *data, long width, long height) {
+    if (width < 1 || height < 1) {
+        fprintf(stderr, "Error: Invalid dimensions for 2D FITS write: %ld x %ld\n", width, height);
+        exit(1);
+    }
+
     fitsfile *fptr;
     int status = 0;
     long naxes[2];

@@ -17,6 +17,11 @@ int main(int argc, char *argv[]) {
     const char *modes_file = argv[3];
     const char *coeffs_file = argv[4];
 
+    if (npca < 1) {
+        fprintf(stderr, "Error: npca must be >= 1. Got %d.\n", npca);
+        return 1;
+    }
+
     printf("PCA Configuration:\n");
     printf("  npca: %d\n", npca);
     printf("  Input: %s\n", infile);
