@@ -18,6 +18,7 @@ void print_help(const char *progname) {
 
 int main(int argc, char *argv[]) {
     if (argc != 3) {
+        fprintf(stderr, "Error: Incorrect number of arguments. Expected input and output filenames.\n");
         print_help(argv[0]);
         return 1;
     }

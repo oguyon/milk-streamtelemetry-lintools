@@ -86,6 +86,7 @@ int main(int argc, char *argv[]) {
     }
 
     if (argc - arg_offset != 4) {
+         fprintf(stderr, "Error: Missing required arguments or invalid usage.\n");
          print_help(argv[0]);
          return 1;
     }
@@ -106,6 +107,11 @@ int main(int argc, char *argv[]) {
     int nvec = atoi(argv[1 + arg_offset]);
     const char *fileA = argv[2 + arg_offset];
     const char *fileB = argv[3 + arg_offset];
+
+    if (nvec < 1) {
+        fprintf(stderr, "Error: nvec must be >= 1. Got %d.\n", nvec);
+        return 1;
+    }
 
     printf("CCA Configuration:\n");
     printf("  nvec: %d\n", nvec);

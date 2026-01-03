@@ -20,6 +20,7 @@ void print_help(const char *progname) {
 
 int main(int argc, char *argv[]) {
     if (argc != 4) {
+        fprintf(stderr, "Error: Incorrect number of arguments. Expected 3 positional arguments.\n");
         print_help(argv[0]);
         return 1;
     }
