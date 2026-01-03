@@ -71,7 +71,11 @@ int main(int argc, char *argv[]) {
     }
 
     if (argc - arg_offset != 3) {
-        fprintf(stderr, "Error: Missing required arguments or invalid usage.\n");
+        if (argc - arg_offset < 3) {
+            fprintf(stderr, "Error: Missing required arguments. Expected 3 positional arguments, found %d.\n", argc - arg_offset - 1);
+        } else {
+            fprintf(stderr, "Error: Too many arguments.\n");
+        }
         print_help(argv[0]);
         return 1;
     }
