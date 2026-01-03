@@ -40,6 +40,19 @@ target_link_libraries(gen_data PRIVATE
     ${CFITSIO_LIBRARIES}
 )
 
+# Mode Projection Program
+add_executable(milk-streamtelemetry-modeval modeval.c)
+target_include_directories(milk-streamtelemetry-modeval PRIVATE
+    ${CFITSIO_INCLUDE_DIRS}
+    ${OPENBLAS_INCLUDE_DIRS}
+)
+target_link_libraries(milk-streamtelemetry-modeval PRIVATE
+    common
+    ${CFITSIO_LIBRARIES}
+    ${OPENBLAS_LIBRARIES}
+    m
+)
+
 # Cube Shuffle Program
 add_executable(milk-streamtelemetry-cubeshuffle cubeshuffle.c)
 target_include_directories(milk-streamtelemetry-cubeshuffle PRIVATE
