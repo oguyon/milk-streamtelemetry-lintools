@@ -62,6 +62,14 @@ void read_fits(const char *filename, double **data, long *N, long *P, int *xa, i
     CHECK_STATUS(status);
 }
 
+void print_args(int argc, char *argv[]) {
+    fprintf(stderr, "Received %d arguments:\n", argc - 1);
+    for (int i = 0; i < argc; i++) {
+        fprintf(stderr, "  argv[%d]: %s\n", i, argv[i]);
+    }
+    fprintf(stderr, "\n");
+}
+
 void read_fits_float(const char *filename, float **data, long *N, long *P, int *xa, int *ya, int *naxis_out) {
     fitsfile *fptr;
     int status = 0;

@@ -56,11 +56,13 @@ int main(int argc, char *argv[]) {
             return 0;
         } else if (strcmp(argv[i], "-ncpu") == 0) {
             if (i + 1 >= argc) {
+                print_args(argc, argv);
                 fprintf(stderr, "Error: -ncpu requires an argument.\n");
                 return 1;
             }
             ncpu = atoi(argv[i+1]);
             if (ncpu < 1) {
+                print_args(argc, argv);
                 fprintf(stderr, "Error: ncpu must be >= 1. Got %d.\n", ncpu);
                 return 1;
             }
@@ -72,6 +74,7 @@ int main(int argc, char *argv[]) {
             arg_offset += 1;
         } else if (strcmp(argv[i], "-mask") == 0) {
             if (i + 1 >= argc) {
+                print_args(argc, argv);
                 fprintf(stderr, "Error: -mask requires an argument.\n");
                 return 1;
             }
@@ -80,6 +83,7 @@ int main(int argc, char *argv[]) {
             arg_offset += 2;
         } else if (strcmp(argv[i], "-automask") == 0) {
             if (i + 1 >= argc) {
+                print_args(argc, argv);
                 fprintf(stderr, "Error: -automask requires an argument.\n");
                 return 1;
             }
@@ -92,10 +96,11 @@ int main(int argc, char *argv[]) {
     }
 
     if (argc - arg_offset != 5) {
+        print_args(argc, argv);
         if (argc - arg_offset < 5) {
             fprintf(stderr, "Error: Missing required arguments. Expected 4 arguments, found %d.\n", argc - arg_offset - 1);
         } else {
-            fprintf(stderr, "Error: Too many arguments.\n");
+            fprintf(stderr, "Error: Too many arguments. Expected 4 arguments, found %d.\n", argc - arg_offset - 1);
         }
         print_help(argv[0]);
         return 1;
@@ -117,6 +122,7 @@ int main(int argc, char *argv[]) {
     const char *coeffs_file = argv[4 + arg_offset];
 
     if (npca < 1) {
+        print_args(argc, argv);
         fprintf(stderr, "Error: npca must be >= 1. Got %d.\n", npca);
         return 1;
     }

@@ -18,10 +18,11 @@ void print_help(const char *progname) {
 
 int main(int argc, char *argv[]) {
     if (argc != 3) {
+        print_args(argc, argv);
         if (argc < 3) {
             fprintf(stderr, "Error: Missing required arguments. Expected input and output filenames, found %d.\n", argc - 1);
         } else {
-            fprintf(stderr, "Error: Too many arguments.\n");
+            fprintf(stderr, "Error: Too many arguments. Expected 2 positional arguments, found %d.\n", argc - 1);
         }
         print_help(argv[0]);
         return 1;

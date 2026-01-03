@@ -26,4 +26,7 @@ void write_fits_3d_float(const char *filename, float *data, int xa, int ya, int 
 void write_fits_2d(const char *filename, double *data, long width, long height);
 void write_fits_2d_float(const char *filename, float *data, long width, long height);
 
+// Prints the list of arguments received by the program
+void print_args(int argc, char *argv[]);
+
 #endif

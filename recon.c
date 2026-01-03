@@ -20,10 +20,11 @@ void print_help(const char *progname) {
 
 int main(int argc, char *argv[]) {
     if (argc != 4) {
+        print_args(argc, argv);
         if (argc < 4) {
             fprintf(stderr, "Error: Missing required arguments. Expected 3 positional arguments, found %d.\n", argc - 1);
         } else {
-            fprintf(stderr, "Error: Too many arguments.\n");
+            fprintf(stderr, "Error: Too many arguments. Expected 3 positional arguments, found %d.\n", argc - 1);
         }
         print_help(argv[0]);
         return 1;
