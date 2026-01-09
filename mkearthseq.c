@@ -4,6 +4,8 @@
 #include <string.h>
 #include <math.h>
 
+#include "earth_data.h"
+
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
@@ -16,37 +18,39 @@ float rotation_speed = 1.0; // degrees per frame
 // Texture function
 float get_earth_intensity(float lat, float lon) {
     // lat: [-PI/2, PI/2], lon: [-PI, PI]
-    // Simple procedural earth-like pattern
+    // Map is 360 wide, 180 high.
+    // lat maps to y [0, 179]
+    // lon maps to x [0, 359]
 
-    // Base level
-    float val = 0.0;
+    // Map lat from [-PI/2, PI/2] to [0, 1] (0 is North Pole in image usually, or South depending on data)
+    // Wikipedia Equirectangular projection usually has North at top.
+    // lat = PI/2 -> y = 0
+    // lat = -PI/2 -> y = H-1
 
-    // Continents (low freq)
-    val += 0.5 * sin(2.0 * lat) * cos(lon);
-    val += 0.4 * cos(3.0 * lat + 1.0) * sin(2.0 * lon + 0.5);
+    float v = 0.5 - (lat / M_PI); // [0, 1]
+    float u = 0.5 + (lon / (2.0 * M_PI)); // [0, 1]
 
-    // Details (high freq)
-    val += 0.1 * sin(10.0 * lat) * cos(10.0 * lon);
-    val += 0.05 * sin(20.0 * lat + lon);
+    int map_w = 360;
+    int map_h = 180;
 
-    // Normalize roughly to 0-1
-    float norm = (val + 1.05) / 2.1;
-    if (norm < 0) norm = 0;
-    if (norm > 1) norm = 1;
+    int x = (int)(u * map_w) % map_w;
+    int y = (int)(v * map_h);
+    if (y < 0) y = 0;
+    if (y >= map_h) y = map_h - 1;
+    if (x < 0) x += map_w;
 
-    // Threshold for land/sea
-    // Land is brighter
-    if (norm > 0.55) {
-        return 0.6 + 0.4 * norm; // Land [0.82, 1.0]
-    } else {
-        return 0.1 + 0.2 * norm; // Sea [0.1, 0.21]
-    }
+    unsigned char val = earth_raw[y * map_w + x];
+    return val / 255.0f;
 }
 
-void parse_filename_arg(const char *arg, char *basename, float *lat, float *lon) {
+void parse_filename_arg(const char *arg, char *basename, size_t basename_size, float *lat, float *lon) {
     const char *bracket = strchr(arg, '[');
     if (bracket) {
         size_t len = bracket - arg;
+        if (len >= basename_size) {
+            fprintf(stderr, "Error: Filename too long.\n");
+            exit(1);
+        }
         strncpy(basename, arg, len);
         basename[len] = '\0';
 
@@ -57,6 +61,10 @@ void parse_filename_arg(const char *arg, char *basename, float *lat, float *lon)
              exit(1);
         }
     } else {
+        if (strlen(arg) >= basename_size) {
+            fprintf(stderr, "Error: Filename too long.\n");
+            exit(1);
+        }
         strcpy(basename, arg);
         *lat = 0.0;
         *lon = 0.0;
@@ -78,7 +86,7 @@ int main(int argc, char *argv[]) {
     char basename[256];
     float lat0 = 0.0, lon0 = 0.0;
 
-    parse_filename_arg(argv[2], basename, &lat0, &lon0);
+    parse_filename_arg(argv[2], basename, sizeof(basename), &lat0, &lon0);
 
     // Parse options
     for (int i = 3; i < argc; i++) {

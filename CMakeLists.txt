@@ -6,6 +6,7 @@ find_package(PkgConfig REQUIRED)
 pkg_check_modules(CFITSIO REQUIRED cfitsio)
 pkg_check_modules(OPENBLAS REQUIRED openblas)
 pkg_check_modules(LAPACKE REQUIRED lapacke)
+pkg_check_modules(LIBPNG REQUIRED libpng)
 
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3 -Wall")
@@ -104,5 +105,18 @@ target_include_directories(milk-streamtelemetry-mkearthseq PRIVATE
 target_link_libraries(milk-streamtelemetry-mkearthseq PRIVATE
     common
     ${CFITSIO_LIBRARIES}
+    m
+)
+
+# FITS 2 PNG Test Tool
+add_executable(milk-streamtelemetry-3DFITS-to-png fits2png.c)
+target_include_directories(milk-streamtelemetry-3DFITS-to-png PRIVATE
+    ${CFITSIO_INCLUDE_DIRS}
+    ${LIBPNG_INCLUDE_DIRS}
+)
+target_link_libraries(milk-streamtelemetry-3DFITS-to-png PRIVATE
+    common
+    ${CFITSIO_LIBRARIES}
+    ${LIBPNG_LIBRARIES}
     m
 )
