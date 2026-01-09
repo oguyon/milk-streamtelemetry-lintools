@@ -63,16 +63,15 @@ echo "Running CCA between earthA and earthB..."
 # The step "$BUILD_DIR/milk-streamtelemetry-cca" will write to CWD.
 
 # Only move if the source and destination are different
-if [ ! "ccaA.fits" -ef "$TEST_DIR/ccaA.fits" ]; then
-    mv ccaA.fits "$TEST_DIR/ccaA.fits"
-fi
-if [ ! "ccaB.fits" -ef "$TEST_DIR/ccaB.fits" ]; then
-    mv ccaB.fits "$TEST_DIR/ccaB.fits"
-fi
+for file in ccaAvec.fits ccaBvec.fits ccaAvar.fits ccaBvar.fits; do
+    if [ -f "$file" ] && [ ! "$file" -ef "$TEST_DIR/$file" ]; then
+        mv "$file" "$TEST_DIR/$file"
+    fi
+done
 
 echo "Visualizing CCA Vectors..."
-$FITS2PNG "$TEST_DIR/ccaA.fits" "$TEST_DIR/ccaA_vectors.png" -slices 0,1,2,3,4 -geom 5x1
-$FITS2PNG "$TEST_DIR/ccaB.fits" "$TEST_DIR/ccaB_vectors.png" -slices 0,1,2,3,4 -geom 5x1
+$FITS2PNG "$TEST_DIR/ccaAvec.fits" "$TEST_DIR/ccaA_vectors.png" -slices 0,1,2,3,4 -geom 5x1
+$FITS2PNG "$TEST_DIR/ccaBvec.fits" "$TEST_DIR/ccaB_vectors.png" -slices 0,1,2,3,4 -geom 5x1
 
 # 7. Generate Report
 echo "Generating Report..."
@@ -170,8 +169,65 @@ $FITS2PNG reconA.fits reconA_frames.png -n 5 -geom 5x1
 $FITS2PNG reconB.fits reconB_frames.png -n 5 -geom 5x1
 
 # Visualize CCA
-$FITS2PNG ccaA.fits ccaA_vectors.png -slices 0,1,2,3,4 -geom 5x1
-$FITS2PNG ccaB.fits ccaB_vectors.png -slices 0,1,2,3,4 -geom 5x1
+$FITS2PNG ccaAvec.fits ccaA_vectors.png -slices 0,1,2,3,4 -geom 5x1
+$FITS2PNG ccaBvec.fits ccaB_vectors.png -slices 0,1,2,3,4 -geom 5x1
+\`\`\`
+
+# 8. Generate Corner Plot
+echo "Generating Corner Plot of Canonical Variables..."
+
+# Convert FITS variables to ASCII
+"$BUILD_DIR/milk-streamtelemetry-fits2ascii" "$TEST_DIR/ccaAvar.fits" > "$TEST_DIR/ccaAvar.txt"
+"$BUILD_DIR/milk-streamtelemetry-fits2ascii" "$TEST_DIR/ccaBvar.fits" > "$TEST_DIR/ccaBvar.txt"
+
+# Combine side-by-side
+paste "$TEST_DIR/ccaAvar.txt" "$TEST_DIR/ccaBvar.txt" > "$TEST_DIR/cca_vars.dat"
+
+# Gnuplot script
+GP_SCRIPT="$TEST_DIR/plot_cca.gp"
+cat <<ENDGP > "$GP_SCRIPT"
+set terminal pngcairo size 1000,1000 enhanced font "Arial,10"
+set output "$TEST_DIR/cca_corner.png"
+set multiplot layout 5,5 rowsfirst title "CCA Canonical Variables Corner Plot"
+
+# Data file structure:
+# Cols 1-5: A0..A4
+# Cols 6-10: B0..B4
+
+do for [j=0:4] {
+    do for [i=0:4] {
+        colA = i + 1
+        colB = j + 6
+
+        # Only show labels on edges to reduce clutter
+        if (j == 4) { set xlabel sprintf("A%d", i) } else { unset xlabel }
+        if (i == 0) { set ylabel sprintf("B%d", j) } else { unset ylabel }
+
+        unset key
+        # Make plots square-ish
+        set size square
+
+        plot "$TEST_DIR/cca_vars.dat" using colA:colB pt 7 ps 0.5 lc rgb "black"
+    }
+}
+unset multiplot
+ENDGP
+
+# Run gnuplot
+gnuplot "$GP_SCRIPT"
+
+# Append to report
+cat <<EOF >> "$TEST_DIR/report.md"
+
+## 6. CCA Corner Plot
+
+Scatter plots of canonical variables $A_i$ vs $B_j$. The diagonal ($i=j$) should show the strongest correlations.
+
+![CCA Corner Plot](cca_corner.png)
+
+**Gnuplot Script:**
+\`\`\`gnuplot
+$(cat "$GP_SCRIPT")
 \`\`\`
 
 EOF

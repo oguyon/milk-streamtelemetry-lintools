@@ -120,3 +120,14 @@ target_link_libraries(milk-streamtelemetry-3DFITS-to-png PRIVATE
     ${LIBPNG_LIBRARIES}
     m
 )
+
+# FITS 2 ASCII Test Tool
+add_executable(milk-streamtelemetry-fits2ascii fits2ascii.c)
+target_include_directories(milk-streamtelemetry-fits2ascii PRIVATE
+    ${CFITSIO_INCLUDE_DIRS}
+)
+target_link_libraries(milk-streamtelemetry-fits2ascii PRIVATE
+    common
+    ${CFITSIO_LIBRARIES}
+    m
+)

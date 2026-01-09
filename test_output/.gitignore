@@ -1,3 +1,6 @@
 *.fits
 *.log
 pca.eigenvalues.txt
+cca*.txt
+cca_vars.dat
+plot_cca.gp

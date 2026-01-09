@@ -91,6 +91,63 @@ The PNG images in this report were generated using the `3DFITS-to-png` tool:
 ../build/milk-streamtelemetry-3DFITS-to-png reconB.fits reconB_frames.png -n 5 -geom 5x1
 
 # Visualize CCA
-../build/milk-streamtelemetry-3DFITS-to-png ccaA.fits ccaA_vectors.png -slices 0,1,2,3,4 -geom 5x1
-../build/milk-streamtelemetry-3DFITS-to-png ccaB.fits ccaB_vectors.png -slices 0,1,2,3,4 -geom 5x1
+../build/milk-streamtelemetry-3DFITS-to-png ccaAvec.fits ccaA_vectors.png -slices 0,1,2,3,4 -geom 5x1
+../build/milk-streamtelemetry-3DFITS-to-png ccaBvec.fits ccaB_vectors.png -slices 0,1,2,3,4 -geom 5x1
+```
+
+# 8. Generate Corner Plot
+echo "Generating Corner Plot of Canonical Variables..."
+
+# Convert FITS variables to ASCII
+"../build/milk-streamtelemetry-fits2ascii" "./ccaAvar.fits" > "./ccaAvar.txt"
+"../build/milk-streamtelemetry-fits2ascii" "./ccaBvar.fits" > "./ccaBvar.txt"
+
+# Combine side-by-side
+paste "./ccaAvar.txt" "./ccaBvar.txt" > "./cca_vars.dat"
+
+# Gnuplot script
+GP_SCRIPT="./plot_cca.gp"
+cat <<ENDGP > ""
+set terminal pngcairo size 1000,1000 enhanced font "Arial,10"
+set output "./cca_corner.png"
+set multiplot layout 5,5 rowsfirst title "CCA Canonical Variables Corner Plot"
+
+# Data file structure:
+# Cols 1-5: A0..A4
+# Cols 6-10: B0..B4
+
+do for [j=0:4] {
+    do for [i=0:4] {
+        colA = i + 1
+        colB = j + 6
+
+        # Only show labels on edges to reduce clutter
+        if (j == 4) { set xlabel sprintf("A%d", i) } else { unset xlabel }
+        if (i == 0) { set ylabel sprintf("B%d", j) } else { unset ylabel }
+
+        unset key
+        # Make plots square-ish
+        set size square
+
+        plot "./cca_vars.dat" using colA:colB pt 7 ps 0.5 lc rgb "black"
+    }
+}
+unset multiplot
+ENDGP
+
+# Run gnuplot
+gnuplot ""
+
+# Append to report
+cat <<EOF >> "./report.md"
+
+## 6. CCA Corner Plot
+
+Scatter plots of canonical variables $ vs $. The diagonal (=j$) should show the strongest correlations.
+
+![CCA Corner Plot](cca_corner.png)
+
+**Gnuplot Script:**
+```gnuplot
+
 ```
