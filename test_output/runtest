@@ -1,0 +1,65 @@
+#!/bin/bash
+set -e
+
+# Setup paths
+BUILD_DIR="../build"
+TEST_DIR="."
+MK_EARTH="$BUILD_DIR/milk-streamtelemetry-mkearthseq"
+FITS2PNG="$BUILD_DIR/milk-streamtelemetry-3DFITS-to-png"
+PCA="$BUILD_DIR/milk-streamtelemetry-pca"
+
+echo "=== Running Test Suite ==="
+
+# 1. Generate Datasets
+echo "Generating earthA..."
+$MK_EARTH 200 "$TEST_DIR/earthA[0,0]" -speed 1.0 -size 100 100
+
+echo "Generating earthB..."
+$MK_EARTH 200 "$TEST_DIR/earthB[30,45]" -speed 1.0 -size 100 100
+
+# 2. Visualize Frames
+echo "Visualizing Frames..."
+$FITS2PNG "$TEST_DIR/earthA.fits" "$TEST_DIR/earthA_frames.png" -n 5 -geom 5x1
+$FITS2PNG "$TEST_DIR/earthB.fits" "$TEST_DIR/earthB_frames.png" -n 5 -geom 5x1
+
+# 3. Run PCA
+echo "Running PCA on earthA..."
+$PCA 10 "$TEST_DIR/earthA.fits" "$TEST_DIR/modesA.fits" "$TEST_DIR/coeffsA.fits" > "$TEST_DIR/pcaA.log"
+
+echo "Running PCA on earthB..."
+$PCA 10 "$TEST_DIR/earthB.fits" "$TEST_DIR/modesB.fits" "$TEST_DIR/coeffsB.fits" > "$TEST_DIR/pcaB.log"
+
+# 4. Visualize Modes
+# Modes are stored as a 3D cube where Z is the mode index.
+echo "Visualizing Modes..."
+$FITS2PNG "$TEST_DIR/modesA.fits" "$TEST_DIR/modesA.png" -slices 0,1,2,3,4 -geom 5x1
+$FITS2PNG "$TEST_DIR/modesB.fits" "$TEST_DIR/modesB.png" -slices 0,1,2,3,4 -geom 5x1
+
+# 5. Generate Report
+echo "Generating Report..."
+cat <<EOF > "$TEST_DIR/report.md"
+# Milk Stream Telemetry Test Report
+
+## Earth Datasets
+
+Two simulated datasets were generated representing a rotating Earth from different viewpoints.
+
+### Earth A (View: Lat 0, Lon 0)
+![Earth A Frames](earthA_frames.png)
+
+### Earth B (View: Lat 30, Lon 45)
+![Earth B Frames](earthB_frames.png)
+
+## PCA Analysis
+
+Principal Component Analysis was performed on both datasets (10 modes). Below are the first 5 spatial modes.
+
+### Earth A Modes
+![Earth A Modes](modesA.png)
+
+### Earth B Modes
+![Earth B Modes](modesB.png)
+
+EOF
+
+echo "Test Complete. Results in $TEST_DIR"

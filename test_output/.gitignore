@@ -1,0 +1,5 @@
+*.fits
+*.png
+*.log
+report.md
+pca.eigenvalues.txt
