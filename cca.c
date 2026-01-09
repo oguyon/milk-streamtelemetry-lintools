@@ -350,6 +350,8 @@ int main(int argc, char *argv[]) {
         }
 
         double *A_vec_cca = NULL, *B_vec_cca = NULL;
+        double *VarsA = (double *)malloc(N * nvec * sizeof(double));
+        double *VarsB = (double *)malloc(N * nvec * sizeof(double));
 
         if (is_coeffs) {
             if (npca > 0) {
@@ -366,11 +368,24 @@ int main(int argc, char *argv[]) {
 
             perform_cca(X, N, Pa, Y, Qb, nvec, &A_vec_cca, &B_vec_cca);
 
-            printf("Writing ccaA.fits (Coeffs)...\n");
-            write_fits_2d("ccaA.fits", A_vec_cca, Pa, nvec);
+            // Compute Canonical Variables: V = X * A^T
+            cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasTrans,
+                        N, nvec, Pa,
+                        1.0, X, Pa,
+                        A_vec_cca, Pa,
+                        0.0, VarsA, nvec);
 
-            printf("Writing ccaB.fits (Coeffs)...\n");
-            write_fits_2d("ccaB.fits", B_vec_cca, Qb, nvec);
+            cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasTrans,
+                        N, nvec, Qb,
+                        1.0, Y, Qb,
+                        B_vec_cca, Qb,
+                        0.0, VarsB, nvec);
+
+            printf("Writing ccaAvec.fits (Vectors)...\n");
+            write_fits_2d("ccaAvec.fits", A_vec_cca, Pa, nvec);
+
+            printf("Writing ccaBvec.fits (Vectors)...\n");
+            write_fits_2d("ccaBvec.fits", B_vec_cca, Qb, nvec);
 
         } else if (npca > 0) {
             if (npca > N) {
@@ -397,6 +412,19 @@ int main(int argc, char *argv[]) {
             printf("Performing CCA on PCA coefficients...\n");
             perform_cca(CoeffsA, N, npca, CoeffsB, npca, nvec, &Wa, &Wb);
 
+            // Compute Canonical Variables: V = Coeffs * W^T
+            cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasTrans,
+                        N, nvec, npca,
+                        1.0, CoeffsA, npca,
+                        Wa, npca,
+                        0.0, VarsA, nvec);
+
+            cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasTrans,
+                        N, nvec, npca,
+                        1.0, CoeffsB, npca,
+                        Wb, npca,
+                        0.0, VarsB, nvec);
+
             // Reconstruct
             A_vec_cca = (double *)malloc(nvec * Pa * sizeof(double));
             cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
@@ -416,11 +444,11 @@ int main(int argc, char *argv[]) {
             free(CoeffsB); free(ModesB);
             free(Wa); free(Wb);
 
-            printf("Writing ccaA.fits...\n");
-            write_fits_3d("ccaA.fits", A_vec_cca, xa, ya, nvec);
+            printf("Writing ccaAvec.fits...\n");
+            write_fits_3d("ccaAvec.fits", A_vec_cca, xa, ya, nvec);
 
-            printf("Writing ccaB.fits...\n");
-            write_fits_3d("ccaB.fits", B_vec_cca, xb, yb, nvec);
+            printf("Writing ccaBvec.fits...\n");
+            write_fits_3d("ccaBvec.fits", B_vec_cca, xb, yb, nvec);
 
         } else {
             if (nvec > Pa) {
@@ -434,17 +462,37 @@ int main(int argc, char *argv[]) {
 
             perform_cca(X, N, Pa, Y, Qb, nvec, &A_vec_cca, &B_vec_cca);
 
-            printf("Writing ccaA.fits...\n");
-            write_fits_3d("ccaA.fits", A_vec_cca, xa, ya, nvec);
+            // Compute Canonical Variables: V = X * A^T
+            cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasTrans,
+                        N, nvec, Pa,
+                        1.0, X, Pa,
+                        A_vec_cca, Pa,
+                        0.0, VarsA, nvec);
 
-            printf("Writing ccaB.fits...\n");
-            write_fits_3d("ccaB.fits", B_vec_cca, xb, yb, nvec);
+            cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasTrans,
+                        N, nvec, Qb,
+                        1.0, Y, Qb,
+                        B_vec_cca, Qb,
+                        0.0, VarsB, nvec);
+
+            printf("Writing ccaAvec.fits...\n");
+            write_fits_3d("ccaAvec.fits", A_vec_cca, xa, ya, nvec);
+
+            printf("Writing ccaBvec.fits...\n");
+            write_fits_3d("ccaBvec.fits", B_vec_cca, xb, yb, nvec);
         }
+
+        printf("Writing ccaAvar.fits (Variables)...\n");
+        write_fits_2d("ccaAvar.fits", VarsA, nvec, N);
+
+        printf("Writing ccaBvar.fits (Variables)...\n");
+        write_fits_2d("ccaBvar.fits", VarsB, nvec, N);
 
         printf("Done.\n");
 
         free(X_orig); free(Y_orig);
         free(A_vec_cca); free(B_vec_cca);
+        free(VarsA); free(VarsB);
     }
     return 0;
 }
