@@ -51,37 +51,80 @@ echo "Generating Report..."
 cat <<EOF > "$TEST_DIR/report.md"
 # Milk Stream Telemetry Test Report
 
-## Earth Datasets
+This report documents the testing of the Earth sequence generation and analysis tools.
+
+## 1. Earth Datasets Generation
 
 Two simulated datasets were generated representing a rotating Earth from different viewpoints.
 
-### Earth A (View: Lat 0, Lon 0)
+**Commands:**
+\`\`\`bash
+# Generate Earth A (View: Lat 0, Lon 0)
+$MK_EARTH 200 "earthA[0,0]" -speed 1.0 -size 100 100
+
+# Generate Earth B (View: Lat 30, Lon 45)
+$MK_EARTH 200 "earthB[30,45]" -speed 1.0 -size 100 100
+\`\`\`
+
+### Earth A
 ![Earth A Frames](earthA_frames.png)
 
-### Earth B (View: Lat 30, Lon 45)
+### Earth B
 ![Earth B Frames](earthB_frames.png)
 
-## PCA Analysis
+## 2. PCA Analysis
 
-Principal Component Analysis was performed on both datasets (10 modes). Below are the first 5 spatial modes.
+Principal Component Analysis was performed on both datasets (10 modes).
+
+**Commands:**
+\`\`\`bash
+# Run PCA
+$PCA 10 earthA.fits modesA.fits coeffsA.fits
+$PCA 10 earthB.fits modesB.fits coeffsB.fits
+\`\`\`
 
 **Note on Mode 0:** The PCA implementation does NOT re-center (de-average) the input data. Therefore, the first mode (Mode 0) represents the average intensity of the dataset.
 
-### Earth A Modes
+### Earth A Modes (First 5)
 ![Earth A Modes](modesA.png)
 
-### Earth B Modes
+### Earth B Modes (First 5)
 ![Earth B Modes](modesB.png)
 
-## PCA Reconstruction
+## 3. PCA Reconstruction
 
 The datasets were reconstructed using the computed modes and coefficients.
+
+**Commands:**
+\`\`\`bash
+# Reconstruct
+$BUILD_DIR/milk-streamtelemetry-recon modesA.fits coeffsA.fits reconA.fits
+$BUILD_DIR/milk-streamtelemetry-recon modesB.fits coeffsB.fits reconB.fits
+\`\`\`
 
 ### Earth A Reconstruction
 ![Earth A Reconstruction](reconA_frames.png)
 
 ### Earth B Reconstruction
 ![Earth B Reconstruction](reconB_frames.png)
+
+## 4. Visualization Commands
+
+The PNG images in this report were generated using the \`3DFITS-to-png\` tool:
+
+\`\`\`bash
+# Visualize Frames
+$FITS2PNG earthA.fits earthA_frames.png -n 5 -geom 5x1
+$FITS2PNG earthB.fits earthB_frames.png -n 5 -geom 5x1
+
+# Visualize Modes
+$FITS2PNG modesA.fits modesA.png -slices 0,1,2,3,4 -geom 5x1
+$FITS2PNG modesB.fits modesB.png -slices 0,1,2,3,4 -geom 5x1
+
+# Visualize Reconstruction
+$FITS2PNG reconA.fits reconA_frames.png -n 5 -geom 5x1
+$FITS2PNG reconB.fits reconB_frames.png -n 5 -geom 5x1
+\`\`\`
 
 EOF
 
