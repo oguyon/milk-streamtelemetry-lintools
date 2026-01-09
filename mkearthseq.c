@@ -43,10 +43,14 @@ float get_earth_intensity(float lat, float lon) {
     }
 }
 
-void parse_filename_arg(const char *arg, char *basename, float *lat, float *lon) {
+void parse_filename_arg(const char *arg, char *basename, size_t basename_size, float *lat, float *lon) {
     const char *bracket = strchr(arg, '[');
     if (bracket) {
         size_t len = bracket - arg;
+        if (len >= basename_size) {
+            fprintf(stderr, "Error: Filename too long.\n");
+            exit(1);
+        }
         strncpy(basename, arg, len);
         basename[len] = '\0';
 
@@ -57,6 +61,10 @@ void parse_filename_arg(const char *arg, char *basename, float *lat, float *lon)
              exit(1);
         }
     } else {
+        if (strlen(arg) >= basename_size) {
+            fprintf(stderr, "Error: Filename too long.\n");
+            exit(1);
+        }
         strcpy(basename, arg);
         *lat = 0.0;
         *lon = 0.0;
@@ -78,7 +86,7 @@ int main(int argc, char *argv[]) {
     char basename[256];
     float lat0 = 0.0, lon0 = 0.0;
 
-    parse_filename_arg(argv[2], basename, &lat0, &lon0);
+    parse_filename_arg(argv[2], basename, sizeof(basename), &lat0, &lon0);
 
     // Parse options
     for (int i = 3; i < argc; i++) {
