@@ -303,11 +303,21 @@ Correlation $r$ is shown on each plot. $\sigma$ values indicate standard deviati
 
 ![CCA Variables](cca_corner.png)
 
+### CCA Gnuplot Script
+\`\`\`gnuplot
+$(cat "$TEST_DIR/cca_corner.gp")
+\`\`\`
+
 ## 7. PCA variables
 
 Scatter plots of PCA coefficients $A_i$ vs $B_j$.
 
 ![PCA Variables](pca_corner.png)
+
+### PCA Gnuplot Script
+\`\`\`gnuplot
+$(cat "$TEST_DIR/pca_corner.gp")
+\`\`\`
 
 EOF
 
