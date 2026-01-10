@@ -131,3 +131,14 @@ target_link_libraries(milk-streamtelemetry-fits2ascii PRIVATE
     ${CFITSIO_LIBRARIES}
     m
 )
+
+# Verify Correlation Tool
+add_executable(milk-streamtelemetry-verify-corr verify_corr.c)
+target_include_directories(milk-streamtelemetry-verify-corr PRIVATE
+    ${CFITSIO_INCLUDE_DIRS}
+)
+target_link_libraries(milk-streamtelemetry-verify-corr PRIVATE
+    common
+    ${CFITSIO_LIBRARIES}
+    m
+)
