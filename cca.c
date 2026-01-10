@@ -7,9 +7,9 @@
 #include "common.h"
 
 // Forward declarations
-void perform_cca(double *X, long N, long P, double *Y, long Q, int nvec, double **A_vec, double **B_vec);
+void perform_cca(double *X, long N, long P, double *Y, long Q, int nvec, double **A_vec, double **B_vec, double **VarsA, double **VarsB);
 void perform_pca(double *X, long N, long P, int npca, double **Coeffs, double **Modes, const char* out_filename, int xa, int ya);
-void perform_cca_float(float *X, long N, long P, float *Y, long Q, int nvec, float **A_vec, float **B_vec);
+void perform_cca_float(float *X, long N, long P, float *Y, long Q, int nvec, float **A_vec, float **B_vec, float **VarsA, float **VarsB);
 void perform_pca_float(float *X, long N, long P, int npca, float **Coeffs, float **Modes, const char* out_filename, int xa, int ya);
 
 void print_help(const char *progname) {
@@ -202,6 +202,7 @@ int main(int argc, char *argv[]) {
         }
 
         float *A_vec_cca = NULL, *B_vec_cca = NULL;
+        float *VarsA = NULL, *VarsB = NULL;
 
         if (is_coeffs) {
             if (npca > 0) {
@@ -216,13 +217,13 @@ int main(int argc, char *argv[]) {
                 nvec = (int)Qb;
             }
 
-            perform_cca_float(X_f, N, Pa, Y_f, Qb, nvec, &A_vec_cca, &B_vec_cca);
+            perform_cca_float(X_f, N, Pa, Y_f, Qb, nvec, &A_vec_cca, &B_vec_cca, &VarsA, &VarsB);
 
-            printf("Writing ccaA.fits (Coeffs)...\n");
-            write_fits_2d_float("ccaA.fits", A_vec_cca, Pa, nvec);
+            printf("Writing ccaAvec.fits (Vectors)...\n");
+            write_fits_2d_float("ccaAvec.fits", A_vec_cca, Pa, nvec);
 
-            printf("Writing ccaB.fits (Coeffs)...\n");
-            write_fits_2d_float("ccaB.fits", B_vec_cca, Qb, nvec);
+            printf("Writing ccaBvec.fits (Vectors)...\n");
+            write_fits_2d_float("ccaBvec.fits", B_vec_cca, Qb, nvec);
 
         } else if (npca > 0) {
             if (npca > N) {
@@ -247,9 +248,9 @@ int main(int argc, char *argv[]) {
             }
 
             printf("Performing CCA on PCA coefficients...\n");
-            perform_cca_float(CoeffsA, N, npca, CoeffsB, npca, nvec, &Wa, &Wb);
+            perform_cca_float(CoeffsA, N, npca, CoeffsB, npca, nvec, &Wa, &Wb, &VarsA, &VarsB);
 
-            // Reconstruct
+            // Reconstruct Spatial Vectors
             A_vec_cca = (float *)malloc(nvec * Pa * sizeof(float));
             cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
                         nvec, Pa, npca,
@@ -284,7 +285,7 @@ int main(int argc, char *argv[]) {
                 nvec = (int)Qb;
             }
 
-            perform_cca_float(X_f, N, Pa, Y_f, Qb, nvec, &A_vec_cca, &B_vec_cca);
+            perform_cca_float(X_f, N, Pa, Y_f, Qb, nvec, &A_vec_cca, &B_vec_cca, &VarsA, &VarsB);
 
             printf("Writing ccaA.fits...\n");
             write_fits_3d_float("ccaA.fits", A_vec_cca, xa, ya, nvec);
@@ -293,10 +294,17 @@ int main(int argc, char *argv[]) {
             write_fits_3d_float("ccaB.fits", B_vec_cca, xb, yb, nvec);
         }
 
+        printf("Writing ccaAvar.fits (Variables)...\n");
+        write_fits_2d_float("ccaAvar.fits", VarsA, nvec, N);
+
+        printf("Writing ccaBvar.fits (Variables)...\n");
+        write_fits_2d_float("ccaBvar.fits", VarsB, nvec, N);
+
         printf("Done.\n");
 
         free(X_orig); free(Y_orig);
         free(A_vec_cca); free(B_vec_cca);
+        free(VarsA); free(VarsB);
 
     } else {
         // Double precision (original code)
@@ -368,20 +376,7 @@ int main(int argc, char *argv[]) {
                 nvec = (int)Qb;
             }
 
-            perform_cca(X, N, Pa, Y, Qb, nvec, &A_vec_cca, &B_vec_cca);
-
-            // Compute Canonical Variables: V = X * A^T
-            cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasTrans,
-                        N, nvec, Pa,
-                        1.0, X, Pa,
-                        A_vec_cca, Pa,
-                        0.0, VarsA, nvec);
-
-            cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasTrans,
-                        N, nvec, Qb,
-                        1.0, Y, Qb,
-                        B_vec_cca, Qb,
-                        0.0, VarsB, nvec);
+            perform_cca(X, N, Pa, Y, Qb, nvec, &A_vec_cca, &B_vec_cca, &VarsA, &VarsB);
 
             printf("Writing ccaAvec.fits (Vectors)...\n");
             write_fits_2d("ccaAvec.fits", A_vec_cca, Pa, nvec);
@@ -412,20 +407,7 @@ int main(int argc, char *argv[]) {
             }
 
             printf("Performing CCA on PCA coefficients...\n");
-            perform_cca(CoeffsA, N, npca, CoeffsB, npca, nvec, &Wa, &Wb);
-
-            // Compute Canonical Variables: V = Coeffs * W^T
-            cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasTrans,
-                        N, nvec, npca,
-                        1.0, CoeffsA, npca,
-                        Wa, npca,
-                        0.0, VarsA, nvec);
-
-            cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasTrans,
-                        N, nvec, npca,
-                        1.0, CoeffsB, npca,
-                        Wb, npca,
-                        0.0, VarsB, nvec);
+            perform_cca(CoeffsA, N, npca, CoeffsB, npca, nvec, &Wa, &Wb, &VarsA, &VarsB);
 
             // Reconstruct
             A_vec_cca = (double *)malloc(nvec * Pa * sizeof(double));
@@ -462,20 +444,7 @@ int main(int argc, char *argv[]) {
                 nvec = (int)Qb;
             }
 
-            perform_cca(X, N, Pa, Y, Qb, nvec, &A_vec_cca, &B_vec_cca);
-
-            // Compute Canonical Variables: V = X * A^T
-            cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasTrans,
-                        N, nvec, Pa,
-                        1.0, X, Pa,
-                        A_vec_cca, Pa,
-                        0.0, VarsA, nvec);
-
-            cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasTrans,
-                        N, nvec, Qb,
-                        1.0, Y, Qb,
-                        B_vec_cca, Qb,
-                        0.0, VarsB, nvec);
+            perform_cca(X, N, Pa, Y, Qb, nvec, &A_vec_cca, &B_vec_cca, &VarsA, &VarsB);
 
             printf("Writing ccaAvec.fits...\n");
             write_fits_3d("ccaAvec.fits", A_vec_cca, xa, ya, nvec);
@@ -550,7 +519,35 @@ void perform_pca(double *X, long N, long P, int npca, double **Coeffs, double **
     free(S); free(U); free(Vt);
 }
 
-void perform_cca(double *X, long N, long P, double *Y, long Q, int nvec, double **A_vec, double **B_vec) {
+void perform_cca(double *X, long N, long P, double *Y, long Q, int nvec, double **A_vec, double **B_vec, double **VarsA, double **VarsB) {
+    // 1. Center input matrices column-wise
+    // We work on copies to avoid modifying originals (if they are used later)
+    // But X and Y here are usually temporary or can be modified?
+    // perform_cca in main is passed X and Y which are malloced.
+    // However, dorgqr overwrites X with Q.
+    // So we need copies anyway if we want to be safe, or we accept X/Y destruction.
+    // But we need to center first.
+
+    // Allocate working copies
+    double *Xc = (double *)malloc(N * P * sizeof(double));
+    double *Yc = (double *)malloc(N * Q * sizeof(double));
+
+    // Copy and Center X
+    for (long j = 0; j < P; j++) {
+        double sum = 0.0;
+        for (long i = 0; i < N; i++) sum += X[i * P + j];
+        double mean = sum / N;
+        for (long i = 0; i < N; i++) Xc[i * P + j] = X[i * P + j] - mean;
+    }
+
+    // Copy and Center Y
+    for (long j = 0; j < Q; j++) {
+        double sum = 0.0;
+        for (long i = 0; i < N; i++) sum += Y[i * Q + j];
+        double mean = sum / N;
+        for (long i = 0; i < N; i++) Yc[i * Q + j] = Y[i * Q + j] - mean;
+    }
+
     long Kx = (N < P) ? N : P;
     long Ky = (N < Q) ? N : Q;
 
@@ -559,29 +556,31 @@ void perform_cca(double *X, long N, long P, double *Y, long Q, int nvec, double 
     double *tauX = (double *)malloc(Kx * sizeof(double));
     double *tauY = (double *)malloc(Ky * sizeof(double));
 
-    LAPACKE_dgeqrf(LAPACK_ROW_MAJOR, N, P, X, P, tauX);
+    // QR on Centered Data
+    LAPACKE_dgeqrf(LAPACK_ROW_MAJOR, N, P, Xc, P, tauX);
     memset(Rx, 0, Kx * P * sizeof(double));
     for (long i = 0; i < Kx; i++) {
         for (long j = i; j < P; j++) {
-            Rx[i * P + j] = X[i * P + j];
+            Rx[i * P + j] = Xc[i * P + j];
         }
     }
-    LAPACKE_dorgqr(LAPACK_ROW_MAJOR, N, Kx, Kx, X, P, tauX);
+    LAPACKE_dorgqr(LAPACK_ROW_MAJOR, N, Kx, Kx, Xc, P, tauX); // Xc becomes Qx
 
-    LAPACKE_dgeqrf(LAPACK_ROW_MAJOR, N, Q, Y, Q, tauY);
+    LAPACKE_dgeqrf(LAPACK_ROW_MAJOR, N, Q, Yc, Q, tauY);
     memset(Ry, 0, Ky * Q * sizeof(double));
     for (long i = 0; i < Ky; i++) {
         for (long j = i; j < Q; j++) {
-            Ry[i * Q + j] = Y[i * Q + j];
+            Ry[i * Q + j] = Yc[i * Q + j];
         }
     }
-    LAPACKE_dorgqr(LAPACK_ROW_MAJOR, N, Ky, Ky, Y, Q, tauY);
+    LAPACKE_dorgqr(LAPACK_ROW_MAJOR, N, Ky, Ky, Yc, Q, tauY); // Yc becomes Qy
 
+    // SVD of Qx^T * Qy
     double *M = (double *)malloc(Kx * Ky * sizeof(double));
     cblas_dgemm(CblasRowMajor, CblasTrans, CblasNoTrans,
                 Kx, Ky, N,
-                1.0, X, P,
-                Y, Q,
+                1.0, Xc, P, // P stride is correct because dorgqr works on the leading dimension
+                Yc, Q,
                 0.0, M, Ky);
 
     double *S = (double *)malloc(((Kx < Ky) ? Kx : Ky) * sizeof(double));
@@ -602,6 +601,38 @@ void perform_cca(double *X, long N, long P, double *Y, long Q, int nvec, double 
         }
     }
 
+    // Canonical Variables: VarsA = Qx * U, VarsB = Qy * V (V = Vt^T)
+    // Qx is N x Kx (in Xc)
+    // U is Kx x Kx
+    // VarsA is N x nvec
+    *VarsA = (double *)malloc(N * nvec * sizeof(double));
+    // We only need first nvec columns of U
+    // To use dgemm, we can multiply all and take slice, or just multiply relevant part?
+    // U is Kx x Kx. We want Qx * U[:, 0:nvec].
+    // Let's multiply full U then slice? Or construct submatrix.
+    // Actually, cblas_dgemm allows submatrices if strides are handled.
+    // A (Qx) is N x Kx. B (U) is Kx x nvec (submatrix).
+    // B stride is Kx.
+    cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
+                N, nvec, Kx,
+                1.0, Xc, P, // Stride of Qx is P (original allocation width)
+                U, Kx,      // Stride of U is Kx
+                0.0, *VarsA, nvec);
+
+    *VarsB = (double *)malloc(N * nvec * sizeof(double));
+    // V = Vt^T. Qy * V = Qy * Vt^T.
+    // Qy is N x Ky. Vt is Ky x Ky.
+    // We want first nvec columns of V -> first nvec rows of Vt.
+    // So Qy * (Vt[0:nvec, :])^T.
+    // A (Qy) is N x Ky. B (Vt) is nvec x Ky.
+    // We want A * B^T.
+    cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasTrans,
+                N, nvec, Ky,
+                1.0, Yc, Q, // Stride of Qy is Q
+                Vt, Ky,     // Stride of Vt is Ky
+                0.0, *VarsB, nvec);
+
+    // Canonical Vectors (Weights)
     *A_vec = (double *)malloc(nvec * P * sizeof(double));
     *B_vec = (double *)malloc(nvec * Q * sizeof(double));
 
@@ -648,6 +679,7 @@ void perform_cca(double *X, long N, long P, double *Y, long Q, int nvec, double 
     free(Rx); free(Ry);
     free(tauX); free(tauY);
     free(M); free(S); free(U); free(Vt);
+    free(Xc); free(Yc);
 }
 
 void perform_pca_float(float *X, long N, long P, int npca, float **Coeffs, float **Modes, const char* out_filename, int xa, int ya) {
@@ -701,7 +733,25 @@ void perform_pca_float(float *X, long N, long P, int npca, float **Coeffs, float
     free(S); free(U); free(Vt);
 }
 
-void perform_cca_float(float *X, long N, long P, float *Y, long Q, int nvec, float **A_vec, float **B_vec) {
+void perform_cca_float(float *X, long N, long P, float *Y, long Q, int nvec, float **A_vec, float **B_vec, float **VarsA, float **VarsB) {
+    // Allocate working copies and center
+    float *Xc = (float *)malloc(N * P * sizeof(float));
+    float *Yc = (float *)malloc(N * Q * sizeof(float));
+
+    for (long j = 0; j < P; j++) {
+        double sum = 0.0;
+        for (long i = 0; i < N; i++) sum += X[i * P + j];
+        float mean = (float)(sum / N);
+        for (long i = 0; i < N; i++) Xc[i * P + j] = X[i * P + j] - mean;
+    }
+
+    for (long j = 0; j < Q; j++) {
+        double sum = 0.0;
+        for (long i = 0; i < N; i++) sum += Y[i * Q + j];
+        float mean = (float)(sum / N);
+        for (long i = 0; i < N; i++) Yc[i * Q + j] = Y[i * Q + j] - mean;
+    }
+
     long Kx = (N < P) ? N : P;
     long Ky = (N < Q) ? N : Q;
 
@@ -710,29 +760,29 @@ void perform_cca_float(float *X, long N, long P, float *Y, long Q, int nvec, flo
     float *tauX = (float *)malloc(Kx * sizeof(float));
     float *tauY = (float *)malloc(Ky * sizeof(float));
 
-    LAPACKE_sgeqrf(LAPACK_ROW_MAJOR, N, P, X, P, tauX);
+    LAPACKE_sgeqrf(LAPACK_ROW_MAJOR, N, P, Xc, P, tauX);
     memset(Rx, 0, Kx * P * sizeof(float));
     for (long i = 0; i < Kx; i++) {
         for (long j = i; j < P; j++) {
-            Rx[i * P + j] = X[i * P + j];
+            Rx[i * P + j] = Xc[i * P + j];
         }
     }
-    LAPACKE_sorgqr(LAPACK_ROW_MAJOR, N, Kx, Kx, X, P, tauX);
+    LAPACKE_sorgqr(LAPACK_ROW_MAJOR, N, Kx, Kx, Xc, P, tauX); // Xc becomes Qx
 
-    LAPACKE_sgeqrf(LAPACK_ROW_MAJOR, N, Q, Y, Q, tauY);
+    LAPACKE_sgeqrf(LAPACK_ROW_MAJOR, N, Q, Yc, Q, tauY);
     memset(Ry, 0, Ky * Q * sizeof(float));
     for (long i = 0; i < Ky; i++) {
         for (long j = i; j < Q; j++) {
-            Ry[i * Q + j] = Y[i * Q + j];
+            Ry[i * Q + j] = Yc[i * Q + j];
         }
     }
-    LAPACKE_sorgqr(LAPACK_ROW_MAJOR, N, Ky, Ky, Y, Q, tauY);
+    LAPACKE_sorgqr(LAPACK_ROW_MAJOR, N, Ky, Ky, Yc, Q, tauY); // Yc becomes Qy
 
     float *M = (float *)malloc(Kx * Ky * sizeof(float));
     cblas_sgemm(CblasRowMajor, CblasTrans, CblasNoTrans,
                 Kx, Ky, N,
-                1.0f, X, P,
-                Y, Q,
+                1.0f, Xc, P,
+                Yc, Q,
                 0.0f, M, Ky);
 
     float *S = (float *)malloc(((Kx < Ky) ? Kx : Ky) * sizeof(float));
@@ -752,6 +802,20 @@ void perform_cca_float(float *X, long N, long P, float *Y, long Q, int nvec, flo
             printf("  Mode %d: %g\n", i, S[i]);
         }
     }
+
+    *VarsA = (float *)malloc(N * nvec * sizeof(float));
+    cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
+                N, nvec, Kx,
+                1.0f, Xc, P,
+                U, Kx,
+                0.0f, *VarsA, nvec);
+
+    *VarsB = (float *)malloc(N * nvec * sizeof(float));
+    cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasTrans,
+                N, nvec, Ky,
+                1.0f, Yc, Q,
+                Vt, Ky,
+                0.0f, *VarsB, nvec);
 
     *A_vec = (float *)malloc(nvec * P * sizeof(float));
     *B_vec = (float *)malloc(nvec * Q * sizeof(float));
@@ -799,4 +863,5 @@ void perform_cca_float(float *X, long N, long P, float *Y, long Q, int nvec, flo
     free(Rx); free(Ry);
     free(tauX); free(tauY);
     free(M); free(S); free(U); free(Vt);
+    free(Xc); free(Yc);
 }
