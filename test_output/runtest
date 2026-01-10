@@ -12,28 +12,28 @@ echo "=== Running Test Suite ==="
 
 # 1. Generate Datasets
 echo "Generating earthA..."
-$MK_EARTH 200 "$TEST_DIR/earthA[0,0]" -speed 1.0 -size 100 100
+$MK_EARTH 1000 "$TEST_DIR/earthA[0,0]" -speed 1.0 -size 100 100
 
 echo "Generating earthB..."
-$MK_EARTH 200 "$TEST_DIR/earthB[30,45]" -speed 1.0 -size 100 100
+$MK_EARTH 1000 "$TEST_DIR/earthB[10,20]" -speed 1.0 -size 100 100
 
 # 2. Visualize Frames
 echo "Visualizing Frames..."
-$FITS2PNG "$TEST_DIR/earthA.fits" "$TEST_DIR/earthA_frames.png" -n 5 -geom 5x1
-$FITS2PNG "$TEST_DIR/earthB.fits" "$TEST_DIR/earthB_frames.png" -n 5 -geom 5x1
+$FITS2PNG "$TEST_DIR/earthA.fits" "$TEST_DIR/earthA_frames.png" -n 20 -geom 10x2
+$FITS2PNG "$TEST_DIR/earthB.fits" "$TEST_DIR/earthB_frames.png" -n 20 -geom 10x2
 
 # 3. Run PCA
 echo "Running PCA on earthA..."
-$PCA 10 "$TEST_DIR/earthA.fits" "$TEST_DIR/modesA.fits" "$TEST_DIR/coeffsA.fits" > "$TEST_DIR/pcaA.log"
+$PCA 20 "$TEST_DIR/earthA.fits" "$TEST_DIR/modesA.fits" "$TEST_DIR/coeffsA.fits" > "$TEST_DIR/pcaA.log"
 
 echo "Running PCA on earthB..."
-$PCA 10 "$TEST_DIR/earthB.fits" "$TEST_DIR/modesB.fits" "$TEST_DIR/coeffsB.fits" > "$TEST_DIR/pcaB.log"
+$PCA 20 "$TEST_DIR/earthB.fits" "$TEST_DIR/modesB.fits" "$TEST_DIR/coeffsB.fits" > "$TEST_DIR/pcaB.log"
 
 # 4. Visualize Modes
 # Modes are stored as a 3D cube where Z is the mode index.
 echo "Visualizing Modes..."
-$FITS2PNG "$TEST_DIR/modesA.fits" "$TEST_DIR/modesA.png" -slices 0,1,2,3,4 -geom 5x1
-$FITS2PNG "$TEST_DIR/modesB.fits" "$TEST_DIR/modesB.png" -slices 0,1,2,3,4 -geom 5x1
+$FITS2PNG "$TEST_DIR/modesA.fits" "$TEST_DIR/modesA.png" -slices 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19 -geom 10x2
+$FITS2PNG "$TEST_DIR/modesB.fits" "$TEST_DIR/modesB.png" -slices 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19 -geom 10x2
 
 # 5. Reconstruct from PCA
 echo "Reconstructing earthA..."
@@ -48,11 +48,14 @@ $FITS2PNG "$TEST_DIR/reconB.fits" "$TEST_DIR/reconB_frames.png" -n 5 -geom 5x1
 
 # 6. Run CCA
 echo "Running CCA between earthA and earthB..."
-# Using -npca 10 to reduce dimensionality before CCA
-"$BUILD_DIR/milk-streamtelemetry-cca" -npca 10 5 "$TEST_DIR/earthA.fits" "$TEST_DIR/earthB.fits"
+# Using -npca 40 20 to reduce dimensionality before CCA
+"$BUILD_DIR/milk-streamtelemetry-cca" -npca 40 20 "$TEST_DIR/earthA.fits" "$TEST_DIR/earthB.fits"
 
 # CCA outputs ccaA.fits and ccaB.fits (canonical vectors) in the current directory (or where run from?)
-# The code writes to "ccaA.fits" and "ccaB.fits".
+# The code writes to "ccaA.fits" and "ccaB.fits" when using -npca.
+if [ -f "ccaA.fits" ]; then mv ccaA.fits ccaAvec.fits; fi
+if [ -f "ccaB.fits" ]; then mv ccaB.fits ccaBvec.fits; fi
+
 # If we run from TEST_DIR, they will be there.
 # Let's ensure they are moved or we run in TEST_DIR.
 # Since we are running with $TEST_DIR paths, the C code opens those files.
@@ -70,8 +73,8 @@ for file in ccaAvec.fits ccaBvec.fits ccaAvar.fits ccaBvar.fits; do
 done
 
 echo "Visualizing CCA Vectors..."
-$FITS2PNG "$TEST_DIR/ccaAvec.fits" "$TEST_DIR/ccaA_vectors.png" -slices 0,1,2,3,4 -geom 5x1
-$FITS2PNG "$TEST_DIR/ccaBvec.fits" "$TEST_DIR/ccaB_vectors.png" -slices 0,1,2,3,4 -geom 5x1
+$FITS2PNG "$TEST_DIR/ccaAvec.fits" "$TEST_DIR/ccaA_vectors.png" -slices 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19 -geom 10x2
+$FITS2PNG "$TEST_DIR/ccaBvec.fits" "$TEST_DIR/ccaB_vectors.png" -slices 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19 -geom 10x2
 
 # 7. Generate Report
 echo "Generating Report..."
@@ -87,10 +90,10 @@ Two simulated datasets were generated representing a rotating Earth from differe
 **Commands:**
 \`\`\`bash
 # Generate Earth A (View: Lat 0, Lon 0)
-$MK_EARTH 200 "earthA[0,0]" -speed 1.0 -size 100 100
+$MK_EARTH 1000 "earthA[0,0]" -speed 1.0 -size 100 100
 
-# Generate Earth B (View: Lat 30, Lon 45)
-$MK_EARTH 200 "earthB[30,45]" -speed 1.0 -size 100 100
+# Generate Earth B (View: Lat 10, Lon 20)
+$MK_EARTH 1000 "earthB[10,20]" -speed 1.0 -size 100 100
 \`\`\`
 
 ### Earth A
@@ -101,21 +104,21 @@ $MK_EARTH 200 "earthB[30,45]" -speed 1.0 -size 100 100
 
 ## 2. PCA Analysis
 
-Principal Component Analysis was performed on both datasets (10 modes).
+Principal Component Analysis was performed on both datasets (20 modes).
 
 **Commands:**
 \`\`\`bash
 # Run PCA
-$PCA 10 earthA.fits modesA.fits coeffsA.fits
-$PCA 10 earthB.fits modesB.fits coeffsB.fits
+$PCA 20 earthA.fits modesA.fits coeffsA.fits
+$PCA 20 earthB.fits modesB.fits coeffsB.fits
 \`\`\`
 
 **Note on Mode 0:** The PCA implementation does NOT re-center (de-average) the input data. Therefore, the first mode (Mode 0) represents the average intensity of the dataset.
 
-### Earth A Modes (First 5)
+### Earth A Modes (First 20)
 ![Earth A Modes](modesA.png)
 
-### Earth B Modes (First 5)
+### Earth B Modes (First 20)
 ![Earth B Modes](modesB.png)
 
 ## 3. PCA Reconstruction
@@ -137,18 +140,18 @@ $BUILD_DIR/milk-streamtelemetry-recon modesB.fits coeffsB.fits reconB.fits
 
 ## 4. CCA Analysis
 
-Canonical Correlation Analysis was performed between Earth A and Earth B, using the top 10 PCA modes for data reduction.
+Canonical Correlation Analysis was performed between Earth A and Earth B, using the top 40 PCA modes for data reduction and computing 20 canonical vectors.
 
 **Commands:**
 \`\`\`bash
-# Run CCA (5 vectors, using top 10 PCA modes)
-$BUILD_DIR/milk-streamtelemetry-cca -npca 10 5 earthA.fits earthB.fits
+# Run CCA (20 vectors, using top 40 PCA modes)
+$BUILD_DIR/milk-streamtelemetry-cca -npca 40 20 earthA.fits earthB.fits
 \`\`\`
 
-### Earth A Canonical Vectors (First 5)
+### Earth A Canonical Vectors (First 20)
 ![Earth A CCA](ccaA_vectors.png)
 
-### Earth B Canonical Vectors (First 5)
+### Earth B Canonical Vectors (First 20)
 ![Earth B CCA](ccaB_vectors.png)
 
 ## 5. Visualization Commands
@@ -157,20 +160,20 @@ The PNG images in this report were generated using the \`3DFITS-to-png\` tool:
 
 \`\`\`bash
 # Visualize Frames
-$FITS2PNG earthA.fits earthA_frames.png -n 5 -geom 5x1
-$FITS2PNG earthB.fits earthB_frames.png -n 5 -geom 5x1
+$FITS2PNG earthA.fits earthA_frames.png -n 20 -geom 10x2
+$FITS2PNG earthB.fits earthB_frames.png -n 20 -geom 10x2
 
 # Visualize Modes
-$FITS2PNG modesA.fits modesA.png -slices 0,1,2,3,4 -geom 5x1
-$FITS2PNG modesB.fits modesB.png -slices 0,1,2,3,4 -geom 5x1
+$FITS2PNG modesA.fits modesA.png -slices 0..19 -geom 10x2
+$FITS2PNG modesB.fits modesB.png -slices 0..19 -geom 10x2
 
 # Visualize Reconstruction
 $FITS2PNG reconA.fits reconA_frames.png -n 5 -geom 5x1
 $FITS2PNG reconB.fits reconB_frames.png -n 5 -geom 5x1
 
 # Visualize CCA
-$FITS2PNG ccaAvec.fits ccaA_vectors.png -slices 0,1,2,3,4 -geom 5x1
-$FITS2PNG ccaBvec.fits ccaB_vectors.png -slices 0,1,2,3,4 -geom 5x1
+$FITS2PNG ccaAvec.fits ccaA_vectors.png -slices 0..19 -geom 10x2
+$FITS2PNG ccaBvec.fits ccaB_vectors.png -slices 0..19 -geom 10x2
 \`\`\`
 
 EOF
@@ -201,7 +204,7 @@ generate_plot() {
     SCRIPT_FILE="${OUT_FILE%.*}.gp"
 
     cat <<ENDGP > "$SCRIPT_FILE"
-set terminal pngcairo size 1000,1000 enhanced font "Arial,10"
+set terminal pngcairo size 2000,2000 enhanced font "Arial,8"
 set output "$OUT_FILE"
 
 # Define style for boxed labels
@@ -209,22 +212,22 @@ set style textbox opaque noborder
 set style fill solid 1.0 noborder
 
 # Use margins to leave space for outer labels, spacing 0,0 to touch plots
-set multiplot layout 5,5 rowsfirst title "$TITLE" margins 0.06, 0.94, 0.06, 0.92 spacing 0,0
+set multiplot layout 20,20 rowsfirst title "$TITLE" margins 0.04, 0.96, 0.04, 0.94 spacing 0,0
 
 # Pre-calculate standard deviations
-array stdA[5]
-array stdB[5]
-do for [k=1:5] {
+array stdA[20]
+array stdB[20]
+do for [k=1:20] {
     stats "$DATA_FILE" u k nooutput
     stdA[k] = STATS_stddev
-    stats "$DATA_FILE" u (k+5) nooutput
+    stats "$DATA_FILE" u (k+20) nooutput
     stdB[k] = STATS_stddev
 }
 
-do for [j=0:4] {
-    do for [i=0:4] {
+do for [j=0:19] {
+    do for [i=0:19] {
         colA = i + 1
-        colB = j + 6
+        colB = j + 21
 
         # Calculate Correlation
         stats "$DATA_FILE" u colA:colB nooutput
@@ -234,16 +237,19 @@ do for [j=0:4] {
         unset label
 
         # Correlation Label (Top Right): Bold Red, White Box
-        set label 1 sprintf("r=%.2f", corr) at graph 0.90, 0.90 right font "Arial-Bold,10" textcolor rgb "red" front boxed
+        # Using a simpler label for density
+        if (abs(corr) > 0.1) {
+            set label 1 sprintf("%.1f", corr) at graph 0.90, 0.90 right font "Arial-Bold,7" textcolor rgb "red" front boxed
+        }
 
         # Standard Deviation Labels
         # Top of Column
         if (j == 0) {
-            set label 2 sprintf("σ(A%d)=%.2g", i, stdA[i+1]) at graph 0.5, 1.05 center font "Arial,9"
+            set label 2 sprintf("σA%d\\n%.1g", i, stdA[i+1]) at graph 0.5, 1.05 center font "Arial,7"
         }
         # Right of Row
-        if (i == 4) {
-            set label 3 sprintf("σ(B%d)=%.2g", j, stdB[j+1]) at graph 1.05, 0.5 left font "Arial,9"
+        if (i == 19) {
+            set label 3 sprintf("σB%d\\n%.1g", j, stdB[j+1]) at graph 1.05, 0.5 left font "Arial,7"
         }
 
         # Axis Labels (Outer Only)
@@ -260,8 +266,8 @@ do for [j=0:4] {
         # Let's keep ticks but remove format as requested.
         set tics scale 0.5
 
-        if (j == 4) { set xlabel sprintf("$VAR_A%d", i) }
-        if (i == 0) { set ylabel sprintf("$VAR_B%d", j) offset 1 }
+        if (j == 19) { set xlabel sprintf("$VAR_A%d", i) font "Arial,8" }
+        if (i == 0) { set ylabel sprintf("$VAR_B%d", j) offset 1 font "Arial,8" }
 
         unset key
         # Make plots square-ish? 'set size square' can mess with layout filling.
@@ -272,7 +278,7 @@ do for [j=0:4] {
         set xzeroaxis lt 1 lc rgb "black"
         set yzeroaxis lt 1 lc rgb "black"
 
-        plot "$DATA_FILE" using colA:colB pt 7 ps 0.5 lc rgb "black"
+        plot "$DATA_FILE" using colA:colB pt 7 ps 0.2 lc rgb "black"
     }
 }
 unset multiplot
@@ -284,14 +290,14 @@ ENDGP
 generate_plot "$TEST_DIR/cca_vars.dat" "$TEST_DIR/cca_corner.png" "CCA Variables (A vs B)" "A" "B"
 generate_plot "$TEST_DIR/pca_vars.dat" "$TEST_DIR/pca_corner.png" "PCA Variables (Coeffs A vs B)" "A" "B"
 
-# 9. Append Correlation Matrix
-echo "Calculating Correlation Matrix..."
+# 9. Append Covariance Matrix
+echo "Calculating Covariance Matrix..."
 echo "" >> "$TEST_DIR/report.md"
-echo "## 8. Correlation Matrix of Canonical Variables" >> "$TEST_DIR/report.md"
+echo "## 8. Covariance Matrix of Canonical Variables" >> "$TEST_DIR/report.md"
 echo "" >> "$TEST_DIR/report.md"
-echo "The following table shows the Pearson correlation coefficients between canonical variables $A_i$ and $B_j$." >> "$TEST_DIR/report.md"
+echo "The following table shows the covariance between canonical variables $A_i$ and $B_j$." >> "$TEST_DIR/report.md"
 echo "" >> "$TEST_DIR/report.md"
-"$BUILD_DIR/milk-streamtelemetry-verify-corr" "$TEST_DIR/ccaAvar.fits" "$TEST_DIR/ccaBvar.fits" >> "$TEST_DIR/report.md"
+"$BUILD_DIR/milk-streamtelemetry-verify-corr" -cov "$TEST_DIR/ccaAvar.fits" "$TEST_DIR/ccaBvar.fits" >> "$TEST_DIR/report.md"
 
 # Append to report
 cat <<EOF >> "$TEST_DIR/report.md"
